@@ -53,9 +53,27 @@
 - **Independent**：測試之間零耦合
 - **Professional**：測試程式碼與產品程式碼同等品質，命名清晰、結構整齊
 
+## 測試檔案位置
+
+production 檔案路徑對應到 `app/src/test/` 下相同的 package 路徑：
+
+| Production | Test |
+|-----------|------|
+| `app/src/main/.../RecordViewModel.kt` | `app/src/test/.../RecordViewModelTest.kt` |
+| `app/src/main/.../BloodPressureRepositoryImpl.kt` | `app/src/test/.../BloodPressureRepositoryImplTest.kt` |
+| `app/src/main/.../utils/DateUtils.kt` | `app/src/test/.../utils/DateUtilsTest.kt` |
+
+## 依照實作類型選擇測試模式
+
+**純函式 / Utility**：直接呼叫，Assert 輸出值。
+
+**ViewModel**：mock Repository，用 `runTest` + `UnconfinedTestDispatcher`，Assert `uiState` 的值。
+
+**Repository**：mock Firestore 相關依賴（不使用真實 Firebase），用 `callbackFlow` 搭配 Turbine 驗證 Flow 發射的值。
+
 ## 工具
 
 - **MockK**：mock Firebase / Repository 等外部依賴
 - **Turbine**：測試 `Flow` 發出的值序列
 - **Truth**：`assertThat(result).isEqualTo(expected)`
-- **Coroutine Test**：`runTest` + `TestCoroutineDispatcher`
+- **Coroutine Test**：`runTest` + `UnconfinedTestDispatcher`

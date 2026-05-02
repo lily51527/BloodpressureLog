@@ -21,6 +21,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 所有程式碼修改必須直接在專案主目錄（`/Users/wenyi_li/AndroidStudioProjects/BloodPressureLog`）進行，不可只修改 worktree（`.claude/worktrees/` 下的目錄）。若目前環境是在 worktree 內，請改以主目錄的絕對路徑操作檔案。
 
+## 開發規範
+
+實作任何功能或邏輯後，須在 `app/src/test/` 中補上對應的 unit test。
+
 ## Build & Test Commands
 
 ```bash
