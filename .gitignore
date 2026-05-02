@@ -19,3 +19,6 @@ app/google-services.json
 # Reference documents
 *.pdf
 *.csv
+
+# Claude Code local settings (machine-specific)
+.claude/settings.local.json
