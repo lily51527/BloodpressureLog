@@ -22,6 +22,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "APP_ID", "\"bloodpressurelog_debug\"")
     }
 
     buildTypes {
@@ -29,6 +30,7 @@ android {
             optimization {
                 enable = false
             }
+            buildConfigField("String", "APP_ID", "\"bloodpressurelog\"")
         }
     }
     compileOptions {
@@ -37,6 +39,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
