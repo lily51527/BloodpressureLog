@@ -6,6 +6,8 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
+import idv.wennyli.bloodpressurelog.data.repository.AuthRepositoryImpl
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepositoryImpl
 import javax.inject.Singleton
@@ -21,6 +23,10 @@ object AppModule {
     @Provides
     @Singleton
     fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideAuthRepository(impl: AuthRepositoryImpl): AuthRepository = impl
 
     @Provides
     @Singleton

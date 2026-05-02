@@ -1,0 +1,116 @@
+package idv.wennyli.bloodpressurelog.data.repository
+
+import com.google.android.gms.tasks.OnFailureListener
+import com.google.android.gms.tasks.OnSuccessListener
+import com.google.android.gms.tasks.Task
+import com.google.firebase.auth.AuthResult
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import idv.wennyli.bloodpressurelog.data.model.DataState
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+class AuthRepositoryImplTest {
+
+    private val mockAuth = mockk<FirebaseAuth>()
+    private val mockUser = mockk<FirebaseUser>()
+    private lateinit var repository: AuthRepositoryImpl
+
+    @Before
+    fun setUp() {
+        repository = AuthRepositoryImpl(mockAuth)
+    }
+
+    @Test
+    fun `currentUser returns auth currentUser`() {
+        every { mockAuth.currentUser } returns mockUser
+        assertEquals(mockUser, repository.currentUser)
+    }
+
+    @Test
+    fun `currentUser returns null when not authenticated`() {
+        every { mockAuth.currentUser } returns null
+        assertNull(repository.currentUser)
+    }
+
+    @Test
+    fun `signInWithEmail returns Success on Firebase success`() = runTest {
+        val task = buildSuccessTask<AuthResult>(null)
+        every { mockAuth.signInWithEmailAndPassword(any(), any()) } returns task
+
+        val result = repository.signInWithEmail("test@test.com", "password")
+
+        assertTrue(result is DataState.Success)
+    }
+
+    @Test
+    fun `signInWithEmail returns Error on Firebase failure`() = runTest {
+        val exception = RuntimeException("Invalid credentials")
+        val task = buildFailureTask<AuthResult>(exception)
+        every { mockAuth.signInWithEmailAndPassword(any(), any()) } returns task
+
+        val result = repository.signInWithEmail("test@test.com", "wrong")
+
+        assertTrue(result is DataState.Error)
+        assertEquals("Invalid credentials", (result as DataState.Error).message)
+    }
+
+    @Test
+    fun `signInAnonymously returns Success on Firebase success`() = runTest {
+        val task = buildSuccessTask<AuthResult>(null)
+        every { mockAuth.signInAnonymously() } returns task
+
+        val result = repository.signInAnonymously()
+
+        assertTrue(result is DataState.Success)
+    }
+
+    @Test
+    fun `signInAnonymously returns Error on Firebase failure`() = runTest {
+        val exception = RuntimeException("Anonymous sign in failed")
+        val task = buildFailureTask<AuthResult>(exception)
+        every { mockAuth.signInAnonymously() } returns task
+
+        val result = repository.signInAnonymously()
+
+        assertTrue(result is DataState.Error)
+        assertEquals("Anonymous sign in failed", (result as DataState.Error).message)
+    }
+
+    @Test
+    fun `signOut calls auth signOut`() = runTest {
+        every { mockAuth.signOut() } returns Unit
+
+        repository.signOut()
+
+        verify { mockAuth.signOut() }
+    }
+
+    // region helpers
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <T> buildSuccessTask(value: Any?): Task<T> = mockk<Task<T>>().apply {
+        every { addOnSuccessListener(any()) } answers {
+            (firstArg() as OnSuccessListener<Any?>).onSuccess(value)
+            this@apply
+        }
+        every { addOnFailureListener(any()) } returns this@apply
+    }
+
+    private fun <T> buildFailureTask(exception: Exception): Task<T> = mockk<Task<T>>().apply {
+        every { addOnSuccessListener(any()) } returns this@apply
+        every { addOnFailureListener(any()) } answers {
+            firstArg<OnFailureListener>().onFailure(exception)
+            this@apply
+        }
+    }
+
+    // endregion
+}
