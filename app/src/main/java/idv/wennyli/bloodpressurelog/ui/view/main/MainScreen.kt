@@ -14,9 +14,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.ui.theme.BloodPressureLogTheme
 
 @Composable
@@ -42,12 +44,12 @@ internal fun MainScreenContent(onSignOut: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Welcome!",
+                text = stringResource(R.string.main_welcome),
                 style = MaterialTheme.typography.headlineMedium,
             )
             Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = onSignOut) {
-                Text("Sign Out")
+                Text(stringResource(R.string.button_sign_out))
             }
         }
     }

@@ -40,10 +40,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.ui.theme.BloodPressureLogTheme
 import idv.wennyli.bloodpressurelog.utils.DateUtils
 import java.time.Instant
@@ -111,10 +113,10 @@ internal fun AddEditRecordContent(
                         }
                         showDatePicker = false
                     },
-                ) { Text("確定") }
+                ) { Text(stringResource(R.string.button_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("取消") }
+                TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.button_cancel)) }
             },
         ) {
             DatePicker(state = datePickerState)
@@ -129,7 +131,7 @@ internal fun AddEditRecordContent(
         )
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
-            title = { Text("選擇時間") },
+            title = { Text(stringResource(R.string.dialog_title_time_picker)) },
             text = { TimePicker(state = timePickerState) },
             confirmButton = {
                 TextButton(
@@ -142,10 +144,10 @@ internal fun AddEditRecordContent(
                         onRecordedAtChange(newEpoch)
                         showTimePicker = false
                     },
-                ) { Text("確定") }
+                ) { Text(stringResource(R.string.button_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { showTimePicker = false }) { Text("取消") }
+                TextButton(onClick = { showTimePicker = false }) { Text(stringResource(R.string.button_cancel)) }
             },
         )
     }
@@ -153,12 +155,12 @@ internal fun AddEditRecordContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (uiState.isEditMode) "編輯紀錄" else "新增紀錄") },
+                title = { Text(if (uiState.isEditMode) stringResource(R.string.screen_title_edit_record) else stringResource(R.string.screen_title_add_record)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回",
+                            contentDescription = stringResource(R.string.content_description_navigate_back),
                         )
                     }
                 },
@@ -178,7 +180,7 @@ internal fun AddEditRecordContent(
             OutlinedTextField(
                 value = uiState.systolic,
                 onValueChange = onSystolicChange,
-                label = { Text("收縮壓 (mmHg)") },
+                label = { Text(stringResource(R.string.label_systolic)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
@@ -188,7 +190,7 @@ internal fun AddEditRecordContent(
             OutlinedTextField(
                 value = uiState.diastolic,
                 onValueChange = onDiastolicChange,
-                label = { Text("舒張壓 (mmHg)") },
+                label = { Text(stringResource(R.string.label_diastolic)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
@@ -198,7 +200,7 @@ internal fun AddEditRecordContent(
             OutlinedTextField(
                 value = uiState.pulse,
                 onValueChange = onPulseChange,
-                label = { Text("脈搏 (bpm)") },
+                label = { Text(stringResource(R.string.label_pulse)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
@@ -208,7 +210,7 @@ internal fun AddEditRecordContent(
             OutlinedTextField(
                 value = uiState.note,
                 onValueChange = onNoteChange,
-                label = { Text("備註（選填）") },
+                label = { Text(stringResource(R.string.label_note)) },
                 minLines = 2,
                 maxLines = 4,
                 modifier = Modifier.fillMaxWidth(),
@@ -216,7 +218,7 @@ internal fun AddEditRecordContent(
             )
 
             Text(
-                text = "量測時間",
+                text = stringResource(R.string.section_title_recorded_at),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -255,7 +257,7 @@ internal fun AddEditRecordContent(
                         strokeWidth = 2.dp,
                     )
                 } else {
-                    Text("儲存")
+                    Text(stringResource(R.string.button_save))
                 }
             }
 

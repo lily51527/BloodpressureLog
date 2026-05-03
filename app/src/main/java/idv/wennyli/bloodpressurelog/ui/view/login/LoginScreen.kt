@@ -23,6 +23,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -30,6 +31,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import idv.wennyli.bloodpressurelog.BuildConfig
+import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.ui.theme.BloodPressureLogTheme
 
 @Composable
@@ -72,7 +74,7 @@ internal fun LoginScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Blood Pressure Log",
+                text = stringResource(R.string.login_title),
                 style = MaterialTheme.typography.headlineMedium,
             )
             Spacer(modifier = Modifier.height(32.dp))
@@ -80,7 +82,7 @@ internal fun LoginScreenContent(
             OutlinedTextField(
                 value = uiState.email,
                 onValueChange = onEmailChange,
-                label = { Text("Email") },
+                label = { Text(stringResource(R.string.label_email)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
@@ -94,7 +96,7 @@ internal fun LoginScreenContent(
             OutlinedTextField(
                 value = uiState.password,
                 onValueChange = onPasswordChange,
-                label = { Text("Password") },
+                label = { Text(stringResource(R.string.label_password)) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
@@ -128,7 +130,7 @@ internal fun LoginScreenContent(
                         strokeWidth = 2.dp,
                     )
                 } else {
-                    Text("Login")
+                    Text(stringResource(R.string.button_login))
                 }
             }
 
@@ -139,7 +141,7 @@ internal fun LoginScreenContent(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !uiState.isLoading,
                 ) {
-                    Text("Anonymous Login (Debug)")
+                    Text(stringResource(R.string.button_anonymous_login_debug))
                 }
             }
         }

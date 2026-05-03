@@ -11,6 +11,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import idv.wennyli.bloodpressurelog.R
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -54,8 +56,8 @@ fun AppNavigation(startLoggedIn: Boolean) {
                                 launchSingleTop = true
                             }
                         },
-                        icon = { Icon(Icons.Default.List, contentDescription = "紀錄") },
-                        label = { Text("紀錄") },
+                        icon = { Icon(Icons.Default.List, contentDescription = stringResource(R.string.nav_label_records)) },
+                        label = { Text(stringResource(R.string.nav_label_records)) },
                     )
                     NavigationBarItem(
                         selected = currentRoute == ROUTE_TRENDS,
@@ -65,8 +67,8 @@ fun AppNavigation(startLoggedIn: Boolean) {
                                 launchSingleTop = true
                             }
                         },
-                        icon = { Icon(Icons.Default.DateRange, contentDescription = "趨勢") },
-                        label = { Text("趨勢") },
+                        icon = { Icon(Icons.Default.DateRange, contentDescription = stringResource(R.string.nav_label_trends)) },
+                        label = { Text(stringResource(R.string.nav_label_trends)) },
                     )
                 }
             }

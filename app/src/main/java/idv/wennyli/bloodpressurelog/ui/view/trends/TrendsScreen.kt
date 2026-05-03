@@ -32,10 +32,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import idv.wennyli.bloodpressurelog.R
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
@@ -66,7 +68,7 @@ internal fun TrendsContent(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("趨勢") })
+            TopAppBar(title = { Text(stringResource(R.string.screen_title_trends)) })
         },
     ) { innerPadding ->
         Column(
@@ -85,7 +87,7 @@ internal fun TrendsContent(
                     FilterChip(
                         selected = uiState.selectedRange == range,
                         onClick = { onRangeChange(range) },
-                        label = { Text(range.label) },
+                        label = { Text(range.displayLabel()) },
                     )
                 }
             }
@@ -98,7 +100,7 @@ internal fun TrendsContent(
                     FilterChip(
                         selected = uiState.selectedMetric == metric,
                         onClick = { onMetricChange(metric) },
-                        label = { Text(metric.label) },
+                        label = { Text(metric.displayLabel()) },
                     )
                 }
             }
@@ -132,7 +134,7 @@ internal fun TrendsContent(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "此區間無紀錄",
+                            text = stringResource(R.string.trends_empty),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -198,16 +200,16 @@ private fun TrendChart(
 private fun SystolicThresholdLegend(modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         Text(
-            text = "收縮壓警戒標準（WHO）",
+            text = stringResource(R.string.trends_systolic_legend_title),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.height(4.dp))
         listOf(
-            Triple("< 120", "正常", Color(0xFF4CAF50)),
-            Triple("120–129", "正常偏高", Color(0xFFFFEB3B)),
-            Triple("130–139", "第一期高血壓", Color(0xFFFF9800)),
-            Triple("≥ 140", "第二期高血壓", Color(0xFFF44336)),
+            Triple("< 120", stringResource(R.string.bp_level_normal), Color(0xFF4CAF50)),
+            Triple("120–129", stringResource(R.string.bp_level_elevated), Color(0xFFFFEB3B)),
+            Triple("130–139", stringResource(R.string.bp_level_high_stage_1), Color(0xFFFF9800)),
+            Triple("≥ 140", stringResource(R.string.bp_level_high_stage_2), Color(0xFFF44336)),
         ).forEach { (range, label, color) ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -275,4 +277,18 @@ private fun TrendsLoadingPreview() {
             onMetricChange = {},
         )
     }
+}
+
+@Composable
+private fun TrendRange.displayLabel(): String = when (this) {
+    TrendRange.DAYS_7 -> stringResource(R.string.trend_range_7_days)
+    TrendRange.DAYS_14 -> stringResource(R.string.trend_range_14_days)
+    TrendRange.DAYS_30 -> stringResource(R.string.trend_range_30_days)
+}
+
+@Composable
+private fun TrendMetric.displayLabel(): String = when (this) {
+    TrendMetric.SYSTOLIC -> stringResource(R.string.trend_metric_systolic)
+    TrendMetric.DIASTOLIC -> stringResource(R.string.trend_metric_diastolic)
+    TrendMetric.PULSE -> stringResource(R.string.trend_metric_pulse)
 }

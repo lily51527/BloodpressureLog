@@ -43,9 +43,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.data.model.BloodPressureLevel
 import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.data.model.TimeSlot
@@ -73,8 +75,8 @@ fun RecordListScreen(
     if (recordIdToDelete != null) {
         AlertDialog(
             onDismissRequest = { recordIdToDelete = null },
-            title = { Text("刪除紀錄") },
-            text = { Text("確定要刪除這筆紀錄嗎？此操作無法復原。") },
+            title = { Text(stringResource(R.string.dialog_title_delete_record)) },
+            text = { Text(stringResource(R.string.dialog_message_delete_record)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -82,11 +84,11 @@ fun RecordListScreen(
                         recordIdToDelete = null
                     },
                 ) {
-                    Text("刪除", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.button_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { recordIdToDelete = null }) { Text("取消") }
+                TextButton(onClick = { recordIdToDelete = null }) { Text(stringResource(R.string.button_cancel)) }
             },
         )
     }
@@ -112,17 +114,17 @@ internal fun RecordListContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("血壓紀錄") },
+                title = { Text(stringResource(R.string.screen_title_record_list)) },
                 actions = {
                     IconButton(onClick = onSignOut) {
-                        Icon(imageVector = Icons.Default.ExitToApp, contentDescription = "登出")
+                        Icon(imageVector = Icons.Default.ExitToApp, contentDescription = stringResource(R.string.content_description_sign_out))
                     }
                 },
             )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddRecord) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "新增紀錄")
+                Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(R.string.content_description_add_record))
             }
         },
     ) { innerPadding ->
@@ -146,7 +148,7 @@ internal fun RecordListContent(
                 }
                 uiState.records.isEmpty() -> {
                     Text(
-                        text = "尚無紀錄，點擊右下角新增",
+                        text = stringResource(R.string.record_list_empty),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.align(Alignment.Center),
@@ -232,14 +234,14 @@ private fun RecordCard(
             IconButton(onClick = onEdit) {
                 Icon(
                     imageVector = Icons.Default.Edit,
-                    contentDescription = "編輯",
+                    contentDescription = stringResource(R.string.content_description_edit),
                     modifier = Modifier.size(20.dp),
                 )
             }
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "刪除",
+                    contentDescription = stringResource(R.string.content_description_delete),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.error,
                 )
@@ -255,11 +257,12 @@ private fun BloodPressureLevel.color(): Color = when (this) {
     BloodPressureLevel.HIGH_STAGE_2 -> Color(0xFFF44336)
 }
 
+@Composable
 private fun TimeSlot.displayName(): String = when (this) {
-    TimeSlot.MORNING -> "早晨"
-    TimeSlot.AFTERNOON -> "下午"
-    TimeSlot.EVENING -> "晚間"
-    TimeSlot.NIGHT -> "深夜"
+    TimeSlot.MORNING -> stringResource(R.string.time_slot_morning)
+    TimeSlot.AFTERNOON -> stringResource(R.string.time_slot_afternoon)
+    TimeSlot.EVENING -> stringResource(R.string.time_slot_evening)
+    TimeSlot.NIGHT -> stringResource(R.string.time_slot_night)
 }
 
 @Preview(showBackground = true, name = "RecordList - With Records")
