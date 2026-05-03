@@ -1,74 +1,132 @@
 package idv.wennyli.bloodpressurelog.ui.navigation
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import idv.wennyli.bloodpressurelog.ui.view.login.LoginScreen
 import idv.wennyli.bloodpressurelog.ui.view.main.MainViewModel
 import idv.wennyli.bloodpressurelog.ui.view.record.AddEditRecordScreen
 import idv.wennyli.bloodpressurelog.ui.view.record.RecordListScreen
+import idv.wennyli.bloodpressurelog.ui.view.trends.TrendsScreen
 
 private const val ROUTE_LOGIN = "login"
 private const val ROUTE_RECORD_LIST = "record_list"
+private const val ROUTE_TRENDS = "trends"
 private const val ROUTE_ADD_EDIT_RECORD = "add_edit_record"
 private const val ARG_RECORD_ID = "recordId"
+
+private val BOTTOM_NAV_ROUTES = setOf(ROUTE_RECORD_LIST, ROUTE_TRENDS)
 
 @Composable
 fun AppNavigation(startLoggedIn: Boolean) {
     val navController = rememberNavController()
     val startDestination = if (startLoggedIn) ROUTE_RECORD_LIST else ROUTE_LOGIN
 
-    NavHost(navController = navController, startDestination = startDestination) {
-        composable(ROUTE_LOGIN) {
-            LoginScreen(
-                onLoginSuccess = {
-                    navController.navigate(ROUTE_RECORD_LIST) {
-                        popUpTo(ROUTE_LOGIN) { inclusive = true }
-                    }
-                },
-            )
-        }
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
 
-        composable(ROUTE_RECORD_LIST) {
-            val mainViewModel: MainViewModel = hiltViewModel()
-            LaunchedEffect(Unit) {
-                mainViewModel.signedOut.collect {
-                    navController.navigate(ROUTE_LOGIN) {
-                        popUpTo(0) { inclusive = true }
-                    }
+    Scaffold(
+        bottomBar = {
+            if (currentRoute in BOTTOM_NAV_ROUTES) {
+                NavigationBar {
+                    NavigationBarItem(
+                        selected = currentRoute == ROUTE_RECORD_LIST,
+                        onClick = {
+                            navController.navigate(ROUTE_RECORD_LIST) {
+                                popUpTo(ROUTE_RECORD_LIST) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        },
+                        icon = { Icon(Icons.Default.List, contentDescription = "紀錄") },
+                        label = { Text("紀錄") },
+                    )
+                    NavigationBarItem(
+                        selected = currentRoute == ROUTE_TRENDS,
+                        onClick = {
+                            navController.navigate(ROUTE_TRENDS) {
+                                popUpTo(ROUTE_RECORD_LIST) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        },
+                        icon = { Icon(Icons.Default.DateRange, contentDescription = "趨勢") },
+                        label = { Text("趨勢") },
+                    )
                 }
             }
-            RecordListScreen(
-                onSignOut = mainViewModel::signOut,
-                onNavigateToAddEdit = { recordId ->
-                    val route = if (recordId != null) {
-                        "$ROUTE_ADD_EDIT_RECORD?$ARG_RECORD_ID=$recordId"
-                    } else {
-                        ROUTE_ADD_EDIT_RECORD
-                    }
-                    navController.navigate(route)
-                },
-            )
-        }
-
-        composable(
-            route = "$ROUTE_ADD_EDIT_RECORD?$ARG_RECORD_ID={$ARG_RECORD_ID}",
-            arguments = listOf(
-                navArgument(ARG_RECORD_ID) {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                },
-            ),
+        },
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = startDestination,
+            modifier = Modifier.padding(innerPadding),
         ) {
-            AddEditRecordScreen(
-                onNavigateBack = { navController.popBackStack() },
-            )
+            composable(ROUTE_LOGIN) {
+                LoginScreen(
+                    onLoginSuccess = {
+                        navController.navigate(ROUTE_RECORD_LIST) {
+                            popUpTo(ROUTE_LOGIN) { inclusive = true }
+                        }
+                    },
+                )
+            }
+
+            composable(ROUTE_RECORD_LIST) {
+                val mainViewModel: MainViewModel = hiltViewModel()
+                LaunchedEffect(Unit) {
+                    mainViewModel.signedOut.collect {
+                        navController.navigate(ROUTE_LOGIN) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                }
+                RecordListScreen(
+                    onSignOut = mainViewModel::signOut,
+                    onNavigateToAddEdit = { recordId ->
+                        val route = if (recordId != null) {
+                            "$ROUTE_ADD_EDIT_RECORD?$ARG_RECORD_ID=$recordId"
+                        } else {
+                            ROUTE_ADD_EDIT_RECORD
+                        }
+                        navController.navigate(route)
+                    },
+                )
+            }
+
+            composable(ROUTE_TRENDS) {
+                TrendsScreen()
+            }
+
+            composable(
+                route = "$ROUTE_ADD_EDIT_RECORD?$ARG_RECORD_ID={$ARG_RECORD_ID}",
+                arguments = listOf(
+                    navArgument(ARG_RECORD_ID) {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ),
+            ) {
+                AddEditRecordScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                )
+            }
         }
     }
 }
