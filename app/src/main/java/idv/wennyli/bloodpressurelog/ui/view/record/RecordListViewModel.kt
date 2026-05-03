@@ -1,0 +1,72 @@
+package idv.wennyli.bloodpressurelog.ui.view.record
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
+import idv.wennyli.bloodpressurelog.data.model.DataState
+import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+data class RecordListUiState(
+    val records: List<BloodPressureRecord> = emptyList(),
+    val isLoading: Boolean = true,
+    val errorMessage: String? = null,
+)
+
+@HiltViewModel
+class RecordListViewModel @Inject constructor(
+    private val repository: BloodPressureRepository,
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(RecordListUiState())
+    val uiState: StateFlow<RecordListUiState> = _uiState.asStateFlow()
+
+    // null = add mode, non-null = recordId for edit mode
+    private val _navigateToAddEdit = MutableSharedFlow<String?>(extraBufferCapacity = 1)
+    val navigateToAddEdit: SharedFlow<String?> = _navigateToAddEdit.asSharedFlow()
+
+    init {
+        observeRecords()
+    }
+
+    private fun observeRecords() {
+        viewModelScope.launch {
+            repository.observeRecords().collect { state ->
+                when (state) {
+                    DataState.Loading -> _uiState.update { it.copy(isLoading = true) }
+                    is DataState.Success -> _uiState.update {
+                        it.copy(
+                            records = state.data.sortedByDescending { it.recordedAt },
+                            isLoading = false,
+                            errorMessage = null,
+                        )
+                    }
+                    is DataState.Error -> _uiState.update {
+                        it.copy(isLoading = false, errorMessage = state.message)
+                    }
+                }
+            }
+        }
+    }
+
+    fun onAddRecord() {
+        viewModelScope.launch { _navigateToAddEdit.emit(null) }
+    }
+
+    fun onEditRecord(id: String) {
+        viewModelScope.launch { _navigateToAddEdit.emit(id) }
+    }
+
+    fun deleteRecord(id: String) {
+        viewModelScope.launch { repository.deleteRecord(id) }
+    }
+}
