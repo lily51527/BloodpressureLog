@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 回覆語言
+
+所有回覆一律使用**繁體中文**。
+
 ## 套件安裝規範
 
 禁止擅自安裝任何軟體或第三方套件，包含但不限於：
