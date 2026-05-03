@@ -21,6 +21,7 @@ import idv.wennyli.bloodpressurelog.data.model.DataState
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.Assert.assertNull
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -147,6 +148,51 @@ class BloodPressureRepositoryImplTest {
         }
 
         verify { mockFirestore.collection("artifacts/bloodpressurelog_debug/users/uid-123/bloodPressures") }
+    }
+
+    // endregion
+
+    // region getRecord
+
+    @Test
+    fun `getRecord returns Success with record when document exists`() = runTest {
+        val mockDoc = buildMockDocument("doc-1")
+        val task = buildSuccessTask<DocumentSnapshot>(mockDoc)
+        every { mockDocumentRef.get() } returns task
+
+        val result = repository.getRecord("doc-1")
+
+        assertTrue(result is DataState.Success)
+        val record = (result as DataState.Success<*>).data as BloodPressureRecord?
+        assertEquals("doc-1", record?.id)
+        assertEquals(120, record?.systolic)
+        assertEquals(80, record?.diastolic)
+    }
+
+    @Test
+    fun `getRecord returns Success with null when document cannot be mapped`() = runTest {
+        val invalidDoc = mockk<DocumentSnapshot>()
+        every { invalidDoc.id } returns "invalid"
+        every { invalidDoc.getLong("systolic") } returns null
+        val task = buildSuccessTask<DocumentSnapshot>(invalidDoc)
+        every { mockDocumentRef.get() } returns task
+
+        val result = repository.getRecord("invalid")
+
+        assertTrue(result is DataState.Success)
+        assertNull((result as DataState.Success<*>).data)
+    }
+
+    @Test
+    fun `getRecord returns Error on Firestore failure`() = runTest {
+        val exception = RuntimeException("get failed")
+        val task = buildFailureTask<DocumentSnapshot>(exception)
+        every { mockDocumentRef.get() } returns task
+
+        val result = repository.getRecord("doc-1")
+
+        assertTrue(result is DataState.Error)
+        assertEquals("get failed", (result as DataState.Error).message)
     }
 
     // endregion

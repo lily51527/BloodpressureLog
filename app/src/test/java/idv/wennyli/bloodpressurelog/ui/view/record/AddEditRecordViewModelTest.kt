@@ -8,10 +8,8 @@ import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -42,7 +40,7 @@ class AddEditRecordViewModelTest {
 
     @Before
     fun setUp() {
-        every { mockRepository.observeRecords() } returns flowOf(DataState.Loading)
+        coEvery { mockRepository.getRecord(any()) } returns DataState.Loading
     }
 
     // ── Add mode ──
@@ -163,7 +161,7 @@ class AddEditRecordViewModelTest {
     // ── Edit mode ──
 
     @Test
-    fun `edit mode loads record from repository`() {
+    fun `edit mode loads record from repository`() = runTest {
         val record = BloodPressureRecord(
             id = "record-1",
             systolic = 130,
@@ -173,7 +171,7 @@ class AddEditRecordViewModelTest {
             recordedAt = 1000L,
             createdAt = 500L,
         )
-        every { mockRepository.observeRecords() } returns flowOf(DataState.Success(listOf(record)))
+        coEvery { mockRepository.getRecord("record-1") } returns DataState.Success(record)
 
         val viewModel = editModeViewModel("record-1")
         val state = viewModel.uiState.value
@@ -185,6 +183,30 @@ class AddEditRecordViewModelTest {
         assertEquals(1000L, state.recordedAt)
         assertEquals(500L, state.originalCreatedAt)
         assertTrue(state.isEditMode)
+        assertFalse(state.isLoading)
+    }
+
+    @Test
+    fun `edit mode shows error when record is not found`() = runTest {
+        coEvery { mockRepository.getRecord("missing-id") } returns DataState.Success(null)
+
+        val viewModel = editModeViewModel("missing-id")
+        val state = viewModel.uiState.value
+
+        assertEquals("找不到紀錄", state.errorMessage)
+        assertFalse(state.isLoading)
+    }
+
+    @Test
+    fun `edit mode shows error when getRecord fails`() = runTest {
+        coEvery { mockRepository.getRecord("record-1") } returns
+            DataState.Error(RuntimeException("Network error"), "Network error")
+
+        val viewModel = editModeViewModel("record-1")
+        val state = viewModel.uiState.value
+
+        assertEquals("Network error", state.errorMessage)
+        assertFalse(state.isLoading)
     }
 
     @Test
@@ -198,7 +220,7 @@ class AddEditRecordViewModelTest {
             recordedAt = 1000L,
             createdAt = 500L,
         )
-        every { mockRepository.observeRecords() } returns flowOf(DataState.Success(listOf(record)))
+        coEvery { mockRepository.getRecord("record-1") } returns DataState.Success(record)
         coEvery { mockRepository.updateRecord(any()) } returns DataState.Success(Unit)
 
         val viewModel = editModeViewModel("record-1")
@@ -221,7 +243,7 @@ class AddEditRecordViewModelTest {
             note = "",
             recordedAt = 1000L,
         )
-        every { mockRepository.observeRecords() } returns flowOf(DataState.Success(listOf(record)))
+        coEvery { mockRepository.getRecord("record-1") } returns DataState.Success(record)
         coEvery { mockRepository.updateRecord(any()) } returns DataState.Success(Unit)
 
         val viewModel = editModeViewModel("record-1")

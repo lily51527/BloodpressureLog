@@ -43,6 +43,19 @@ class BloodPressureRepositoryImpl @Inject constructor(
         awaitClose { subscription.remove() }
     }
 
+    override suspend fun getRecord(id: String): DataState<BloodPressureRecord?> =
+        suspendCancellableCoroutine { continuation ->
+            recordsCollection()
+                .document(id)
+                .get()
+                .addOnSuccessListener { document ->
+                    continuation.resume(DataState.Success(document.toBloodPressureRecord()))
+                }
+                .addOnFailureListener { e ->
+                    continuation.resume(DataState.Error(e, e.message ?: "Failed to get record"))
+                }
+        }
+
     override suspend fun addRecord(record: BloodPressureRecord): DataState<Unit> =
         suspendCancellableCoroutine { continuation ->
             val now = System.currentTimeMillis()

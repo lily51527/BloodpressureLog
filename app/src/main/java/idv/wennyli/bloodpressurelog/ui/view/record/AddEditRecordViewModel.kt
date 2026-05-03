@@ -13,8 +13,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -54,22 +52,30 @@ class AddEditRecordViewModel @Inject constructor(
     private fun loadRecord(id: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            repository.observeRecords()
-                .mapNotNull { state -> (state as? DataState.Success)?.data?.find { it.id == id } }
-                .take(1)
-                .collect { record ->
-                    _uiState.update {
-                        it.copy(
-                            systolic = record.systolic.toString(),
-                            diastolic = record.diastolic.toString(),
-                            pulse = record.pulse.toString(),
-                            note = record.note,
-                            recordedAt = record.recordedAt,
-                            originalCreatedAt = record.createdAt,
-                            isLoading = false,
-                        )
+            when (val result = repository.getRecord(id)) {
+                is DataState.Success -> {
+                    val record = result.data
+                    if (record != null) {
+                        _uiState.update {
+                            it.copy(
+                                systolic = record.systolic.toString(),
+                                diastolic = record.diastolic.toString(),
+                                pulse = record.pulse.toString(),
+                                note = record.note,
+                                recordedAt = record.recordedAt,
+                                originalCreatedAt = record.createdAt,
+                                isLoading = false,
+                            )
+                        }
+                    } else {
+                        _uiState.update { it.copy(isLoading = false, errorMessage = "找不到紀錄") }
                     }
                 }
+                is DataState.Error -> {
+                    _uiState.update { it.copy(isLoading = false, errorMessage = result.message) }
+                }
+                DataState.Loading -> {}
+            }
         }
     }
 
