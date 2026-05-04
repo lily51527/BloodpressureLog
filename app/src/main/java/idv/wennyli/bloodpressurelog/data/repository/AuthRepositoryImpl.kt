@@ -3,6 +3,9 @@ package idv.wennyli.bloodpressurelog.data.repository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import idv.wennyli.bloodpressurelog.data.model.DataState
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
 import kotlin.coroutines.resume
@@ -13,6 +16,12 @@ class AuthRepositoryImpl @Inject constructor(
 
     override val currentUser: FirebaseUser?
         get() = auth.currentUser
+
+    override val authStateChanges: Flow<FirebaseUser?> = callbackFlow {
+        val listener = FirebaseAuth.AuthStateListener { trySend(it.currentUser) }
+        auth.addAuthStateListener(listener)
+        awaitClose { auth.removeAuthStateListener(listener) }
+    }
 
     override suspend fun signInWithEmail(email: String, password: String): DataState<Unit> =
         suspendCancellableCoroutine { continuation ->

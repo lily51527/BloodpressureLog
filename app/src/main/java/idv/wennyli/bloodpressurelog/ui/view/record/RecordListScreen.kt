@@ -58,7 +58,6 @@ import idv.wennyli.bloodpressurelog.utils.DateUtils
 
 @Composable
 fun RecordListScreen(
-    onSignOut: () -> Unit,
     onNavigateToAddEdit: (recordId: String?) -> Unit,
     viewModel: RecordListViewModel = hiltViewModel(),
 ) {
@@ -95,7 +94,7 @@ fun RecordListScreen(
 
     RecordListContent(
         uiState = uiState,
-        onSignOut = onSignOut,
+        onSignOut = viewModel::signOut,
         onAddRecord = viewModel::onAddRecord,
         onEditRecord = viewModel::onEditRecord,
         onDeleteRecord = { recordIdToDelete = it },

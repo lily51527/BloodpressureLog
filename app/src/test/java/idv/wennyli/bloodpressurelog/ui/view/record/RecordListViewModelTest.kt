@@ -4,10 +4,13 @@ import app.cash.turbine.test
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
 import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.data.model.DataState
+import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
+import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -28,6 +31,7 @@ class RecordListViewModelTest {
     val mainDispatcherRule = MainDispatcherRule(UnconfinedTestDispatcher())
 
     private val mockRepository = mockk<BloodPressureRepository>()
+    private val mockAuthRepository = mockk<AuthRepository>()
     private lateinit var viewModel: RecordListViewModel
 
     private val sampleRecords = listOf(
@@ -39,7 +43,7 @@ class RecordListViewModelTest {
     @Before
     fun setUp() {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Loading)
-        viewModel = RecordListViewModel(mockRepository)
+        viewModel = RecordListViewModel(mockRepository, mockAuthRepository)
     }
 
     @Test
@@ -54,7 +58,7 @@ class RecordListViewModelTest {
     fun `success state populates records sorted by recordedAt descending`() {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(sampleRecords))
 
-        viewModel = RecordListViewModel(mockRepository)
+        viewModel = RecordListViewModel(mockRepository, mockAuthRepository)
 
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
@@ -67,7 +71,7 @@ class RecordListViewModelTest {
         val error = RuntimeException("Firestore error")
         every { mockRepository.observeRecords() } returns flowOf(DataState.Error(error, "Firestore error"))
 
-        viewModel = RecordListViewModel(mockRepository)
+        viewModel = RecordListViewModel(mockRepository, mockAuthRepository)
 
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
@@ -78,7 +82,7 @@ class RecordListViewModelTest {
     fun `loading state sets isLoading true`() {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Loading)
 
-        viewModel = RecordListViewModel(mockRepository)
+        viewModel = RecordListViewModel(mockRepository, mockAuthRepository)
 
         assertTrue(viewModel.uiState.value.isLoading)
     }
@@ -111,10 +115,19 @@ class RecordListViewModelTest {
     }
 
     @Test
+    fun `signOut calls authRepository signOut`() = runTest {
+        coEvery { mockAuthRepository.signOut() } just Runs
+
+        viewModel.signOut()
+
+        coVerify { mockAuthRepository.signOut() }
+    }
+
+    @Test
     fun `success with empty list shows empty state`() {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(emptyList()))
 
-        viewModel = RecordListViewModel(mockRepository)
+        viewModel = RecordListViewModel(mockRepository, mockAuthRepository)
 
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)

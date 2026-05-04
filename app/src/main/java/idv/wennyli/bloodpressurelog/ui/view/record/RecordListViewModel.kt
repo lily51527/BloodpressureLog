@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.data.model.DataState
+import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +26,7 @@ data class RecordListUiState(
 @HiltViewModel
 class RecordListViewModel @Inject constructor(
     private val repository: BloodPressureRepository,
+    private val authRepository: AuthRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RecordListUiState())
@@ -64,6 +66,10 @@ class RecordListViewModel @Inject constructor(
 
     fun onEditRecord(id: String) {
         viewModelScope.launch { _navigateToAddEdit.emit(id) }
+    }
+
+    fun signOut() {
+        viewModelScope.launch { authRepository.signOut() }
     }
 
     fun deleteRecord(id: String) {

@@ -46,9 +46,11 @@ fun AppNavigation(startLoggedIn: Boolean) {
     val currentRoute = navBackStackEntry?.destination?.route
 
     LaunchedEffect(Unit) {
-        mainViewModel.signedOut.collect {
-            navController.navigate(ROUTE_LOGIN) {
-                popUpTo(0) { inclusive = true }
+        mainViewModel.authState.collect { user ->
+            if (user == null && navController.currentDestination?.route != ROUTE_LOGIN) {
+                navController.navigate(ROUTE_LOGIN) {
+                    popUpTo(0) { inclusive = true }
+                }
             }
         }
     }
@@ -100,7 +102,6 @@ fun AppNavigation(startLoggedIn: Boolean) {
 
             composable(ROUTE_RECORD_LIST) {
                 RecordListScreen(
-                    onSignOut = mainViewModel::signOut,
                     onNavigateToAddEdit = { recordId ->
                         val route = if (recordId != null) {
                             "$ROUTE_ADD_EDIT_RECORD?$ARG_RECORD_ID=$recordId"
