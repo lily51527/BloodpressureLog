@@ -1,8 +1,8 @@
 package idv.wennyli.bloodpressurelog.ui.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -15,7 +15,7 @@ import androidx.compose.ui.res.stringResource
 import idv.wennyli.bloodpressurelog.R
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -53,7 +53,7 @@ fun AppNavigation(startLoggedIn: Boolean) {
 
     LaunchedEffect(Unit) {
         mainViewModel.authState.collect { user ->
-            if (user == null && navController.currentDestination?.route != ROUTE_LOGIN) {
+            if (user == null && (navController.currentDestination?.route != ROUTE_LOGIN)) {
                 navController.navigate(ROUTE_LOGIN) {
                     popUpTo(0) { inclusive = true }
                 }
@@ -73,7 +73,7 @@ fun AppNavigation(startLoggedIn: Boolean) {
                                 launchSingleTop = true
                             }
                         },
-                        icon = { Icon(Icons.Default.List, contentDescription = stringResource(R.string.nav_label_records)) },
+                        icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = stringResource(R.string.nav_label_records)) },
                         label = { Text(stringResource(R.string.nav_label_records)) },
                     )
                     NavigationBarItem(
