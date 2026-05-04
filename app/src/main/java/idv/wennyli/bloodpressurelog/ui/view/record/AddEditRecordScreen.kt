@@ -44,7 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.ui.theme.BloodPressureLogTheme
 import idv.wennyli.bloodpressurelog.utils.DateUtils

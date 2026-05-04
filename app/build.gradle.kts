@@ -59,6 +59,7 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.hilt.android)
+    implementation(libs.hilt.lifecycle.viewmodel.compose)
     implementation(libs.hilt.navigation.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.vico.compose.m3)
