@@ -2,9 +2,11 @@ package idv.wennyli.bloodpressurelog.ui.view.login
 
 import app.cash.turbine.test
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
+import com.google.firebase.auth.FirebaseUser
 import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -55,10 +57,27 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `signInWithEmail emits navigateToMain on success`() = runTest {
+    fun `signInWithEmail emits navigateToMain when email is verified`() = runTest {
+        val mockUser = mockk<FirebaseUser>()
+        every { mockUser.isEmailVerified } returns true
+        every { mockAuthRepository.currentUser } returns mockUser
         coEvery { mockAuthRepository.signInWithEmail(any(), any()) } returns DataState.Success(Unit)
 
         viewModel.navigateToMain.test {
+            viewModel.signInWithEmail()
+            awaitItem()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `signInWithEmail emits navigateToEmailVerification when email is not verified`() = runTest {
+        val mockUser = mockk<FirebaseUser>()
+        every { mockUser.isEmailVerified } returns false
+        every { mockAuthRepository.currentUser } returns mockUser
+        coEvery { mockAuthRepository.signInWithEmail(any(), any()) } returns DataState.Success(Unit)
+
+        viewModel.navigateToEmailVerification.test {
             viewModel.signInWithEmail()
             awaitItem()
             cancelAndIgnoreRemainingEvents()

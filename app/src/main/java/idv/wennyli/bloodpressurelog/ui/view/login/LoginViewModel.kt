@@ -49,7 +49,14 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             when (val result = authRepository.signInWithEmail(state.email, state.password)) {
-                is DataState.Success -> _navigateToMain.emit(Unit)
+                is DataState.Success -> {
+                    if (authRepository.currentUser?.isEmailVerified == true) {
+                        _navigateToMain.emit(Unit)
+                    } else {
+                        _uiState.update { it.copy(isLoading = false) }
+                        _navigateToEmailVerification.emit(Unit)
+                    }
+                }
                 is DataState.Error -> _uiState.update {
                     it.copy(
                         isLoading = false,
