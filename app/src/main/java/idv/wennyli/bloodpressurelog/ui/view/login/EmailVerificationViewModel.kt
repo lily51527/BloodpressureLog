@@ -36,6 +36,10 @@ class EmailVerificationViewModel @Inject constructor(
     private val _navigateToLogin = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val navigateToLogin: SharedFlow<Unit> = _navigateToLogin.asSharedFlow()
 
+    init {
+        startCooldown()
+    }
+
     fun resendVerificationEmail() {
         if (_uiState.value.resendCooldownSeconds > 0) return
         viewModelScope.launch {
