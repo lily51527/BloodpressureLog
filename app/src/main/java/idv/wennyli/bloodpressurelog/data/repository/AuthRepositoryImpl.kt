@@ -44,4 +44,47 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun signOut() {
         auth.signOut()
     }
+
+    override suspend fun registerWithEmail(email: String, password: String): DataState<Unit> =
+        suspendCancellableCoroutine { continuation ->
+            auth.createUserWithEmailAndPassword(email, password)
+                .addOnSuccessListener {
+                    auth.currentUser?.sendEmailVerification()
+                    continuation.resume(DataState.Success(Unit))
+                }
+                .addOnFailureListener { e ->
+                    continuation.resume(DataState.Error(e, e.message ?: "Registration failed"))
+                }
+        }
+
+    override suspend fun sendEmailVerification(): DataState<Unit> {
+        val user = auth.currentUser
+            ?: return DataState.Error(IllegalStateException("No user"), "No signed-in user")
+        return suspendCancellableCoroutine { continuation ->
+            user.sendEmailVerification()
+                .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
+                .addOnFailureListener { e ->
+                    continuation.resume(
+                        DataState.Error(
+                            e,
+                            e.message ?: "Failed to send verification email"
+                        )
+                    )
+                }
+        }
+    }
+
+    override suspend fun sendPasswordResetEmail(email: String): DataState<Unit> =
+        suspendCancellableCoroutine { continuation ->
+            auth.sendPasswordResetEmail(email)
+                .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
+                .addOnFailureListener { e ->
+                    continuation.resume(
+                        DataState.Error(
+                            e,
+                            e.message ?: "Failed to send password reset email"
+                        )
+                    )
+                }
+        }
 }

@@ -10,4 +10,7 @@ interface AuthRepository {
     suspend fun signInWithEmail(email: String, password: String): DataState<Unit>
     suspend fun signInAnonymously(): DataState<Unit>
     suspend fun signOut()
+    suspend fun registerWithEmail(email: String, password: String): DataState<Unit>
+    suspend fun sendEmailVerification(): DataState<Unit>
+    suspend fun sendPasswordResetEmail(email: String): DataState<Unit>
 }
