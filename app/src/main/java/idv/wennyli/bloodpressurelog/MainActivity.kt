@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             BloodPressureLogTheme {
-                AppNavigation(startLoggedIn = authRepository.currentUser != null)
+                AppNavigation(startLoggedIn = authRepository.currentUser?.isEmailVerified == true)
             }
         }
     }
