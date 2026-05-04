@@ -23,6 +23,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import idv.wennyli.bloodpressurelog.ui.view.login.EmailVerificationScreen
+import idv.wennyli.bloodpressurelog.ui.view.login.ForgotPasswordScreen
 import idv.wennyli.bloodpressurelog.ui.view.login.LoginScreen
 import idv.wennyli.bloodpressurelog.ui.view.login.RegisterScreen
 import idv.wennyli.bloodpressurelog.ui.view.main.MainViewModel
@@ -124,6 +125,14 @@ fun AppNavigation(startLoggedIn: Boolean) {
                         }
                     },
                     onNavigateToLogin = {
+                        navController.popBackStack()
+                    },
+                )
+            }
+
+            composable(ROUTE_FORGOT_PASSWORD) {
+                ForgotPasswordScreen(
+                    onNavigateBack = {
                         navController.popBackStack()
                     },
                 )
