@@ -13,7 +13,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -31,50 +30,40 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import idv.wennyli.bloodpressurelog.BuildConfig
 import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.ui.theme.BloodPressureLogTheme
 
 @Composable
-fun LoginScreen(
-    onLoginSuccess: () -> Unit,
-    onNavigateToRegister: () -> Unit,
-    onNavigateToForgotPassword: () -> Unit,
-    onNavigateToEmailVerification: () -> Unit,
-    viewModel: LoginViewModel = hiltViewModel(),
+fun RegisterScreen(
+    onRegisterSuccess: () -> Unit,
+    onNavigateToLogin: () -> Unit,
+    viewModel: RegisterViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val passwordMismatchError = stringResource(R.string.error_passwords_do_not_match)
 
     LaunchedEffect(Unit) {
-        viewModel.navigateToMain.collect { onLoginSuccess() }
+        viewModel.navigateToEmailVerification.collect { onRegisterSuccess() }
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.navigateToEmailVerification.collect { onNavigateToEmailVerification() }
-    }
-
-    LoginScreenContent(
+    RegisterScreenContent(
         uiState = uiState,
         onEmailChange = viewModel::onEmailChange,
         onPasswordChange = viewModel::onPasswordChange,
-        onSignIn = viewModel::signInWithEmail,
-        onAnonymousSignIn = viewModel::signInAnonymously,
-        showAnonymousButton = BuildConfig.DEBUG,
-        onNavigateToRegister = onNavigateToRegister,
-        onNavigateToForgotPassword = onNavigateToForgotPassword,
+        onConfirmPasswordChange = viewModel::onConfirmPasswordChange,
+        onRegister = { viewModel.register(passwordMismatchError) },
+        onNavigateToLogin = onNavigateToLogin,
     )
 }
 
 @Composable
-internal fun LoginScreenContent(
-    uiState: LoginUiState,
+internal fun RegisterScreenContent(
+    uiState: RegisterUiState,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
-    onSignIn: () -> Unit,
-    onAnonymousSignIn: () -> Unit,
-    showAnonymousButton: Boolean,
-    onNavigateToRegister: () -> Unit = {},
-    onNavigateToForgotPassword: () -> Unit = {},
+    onConfirmPasswordChange: (String) -> Unit,
+    onRegister: () -> Unit,
+    onNavigateToLogin: () -> Unit,
 ) {
     Scaffold { innerPadding ->
         Column(
@@ -86,7 +75,7 @@ internal fun LoginScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = stringResource(R.string.login_title),
+                text = stringResource(R.string.screen_title_register),
                 style = MaterialTheme.typography.headlineMedium,
             )
             Spacer(modifier = Modifier.height(32.dp))
@@ -113,9 +102,24 @@ internal fun LoginScreenContent(
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Next,
+                ),
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.isLoading,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = uiState.confirmPassword,
+                onValueChange = onConfirmPasswordChange,
+                label = { Text(stringResource(R.string.label_confirm_password)) },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done,
                 ),
-                keyboardActions = KeyboardActions(onDone = { onSignIn() }),
+                keyboardActions = KeyboardActions(onDone = { onRegister() }),
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !uiState.isLoading,
             )
@@ -131,7 +135,7 @@ internal fun LoginScreenContent(
             }
 
             Button(
-                onClick = onSignIn,
+                onClick = onRegister,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !uiState.isLoading,
             ) {
@@ -142,75 +146,44 @@ internal fun LoginScreenContent(
                         strokeWidth = 2.dp,
                     )
                 } else {
-                    Text(stringResource(R.string.button_login))
-                }
-            }
-
-            if (showAnonymousButton) {
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = onAnonymousSignIn,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !uiState.isLoading,
-                ) {
-                    Text(stringResource(R.string.button_anonymous_login_debug))
+                    Text(stringResource(R.string.button_register))
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            TextButton(onClick = onNavigateToForgotPassword) {
-                Text(stringResource(R.string.link_forgot_password))
-            }
-            TextButton(onClick = onNavigateToRegister) {
-                Text(stringResource(R.string.link_register))
+
+            TextButton(onClick = onNavigateToLogin) {
+                Text(stringResource(R.string.link_already_have_account))
             }
         }
     }
 }
 
-@Preview(showBackground = true, name = "Login - Default")
+@Preview(showBackground = true, name = "Register - Default")
 @Composable
-private fun LoginScreenPreview() {
+private fun RegisterScreenPreview() {
     BloodPressureLogTheme {
-        LoginScreenContent(
-            uiState = LoginUiState(email = "user@example.com", password = "password"),
+        RegisterScreenContent(
+            uiState = RegisterUiState(email = "user@example.com"),
             onEmailChange = {},
             onPasswordChange = {},
-            onSignIn = {},
-            onAnonymousSignIn = {},
-            showAnonymousButton = true,
+            onConfirmPasswordChange = {},
+            onRegister = {},
+            onNavigateToLogin = {},
         )
     }
 }
 
-@Preview(showBackground = true, name = "Login - Loading")
+@Preview(showBackground = true, name = "Register - Error")
 @Composable
-private fun LoginScreenLoadingPreview() {
+private fun RegisterScreenErrorPreview() {
     BloodPressureLogTheme {
-        LoginScreenContent(
-            uiState = LoginUiState(isLoading = true),
+        RegisterScreenContent(
+            uiState = RegisterUiState(errorMessage = "兩次輸入的密碼不一致"),
             onEmailChange = {},
             onPasswordChange = {},
-            onSignIn = {},
-            onAnonymousSignIn = {},
-            showAnonymousButton = true,
-        )
-    }
-}
-
-@Preview(showBackground = true, name = "Login - Error")
-@Composable
-private fun LoginScreenErrorPreview() {
-    BloodPressureLogTheme {
-        LoginScreenContent(
-            uiState = LoginUiState(
-                email = "user@example.com",
-                errorMessage = "Invalid email or password.",
-            ),
-            onEmailChange = {},
-            onPasswordChange = {},
-            onSignIn = {},
-            onAnonymousSignIn = {},
-            showAnonymousButton = false,
+            onConfirmPasswordChange = {},
+            onRegister = {},
+            onNavigateToLogin = {},
         )
     }
 }

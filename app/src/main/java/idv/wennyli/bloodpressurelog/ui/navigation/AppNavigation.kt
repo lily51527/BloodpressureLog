@@ -23,12 +23,16 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import idv.wennyli.bloodpressurelog.ui.view.login.LoginScreen
+import idv.wennyli.bloodpressurelog.ui.view.login.RegisterScreen
 import idv.wennyli.bloodpressurelog.ui.view.main.MainViewModel
 import idv.wennyli.bloodpressurelog.ui.view.record.AddEditRecordScreen
 import idv.wennyli.bloodpressurelog.ui.view.record.RecordListScreen
 import idv.wennyli.bloodpressurelog.ui.view.trends.TrendsScreen
 
 private const val ROUTE_LOGIN = "login"
+private const val ROUTE_REGISTER = "register"
+private const val ROUTE_EMAIL_VERIFICATION = "email_verification"
+private const val ROUTE_FORGOT_PASSWORD = "forgot_password"
 private const val ROUTE_RECORD_LIST = "record_list"
 private const val ROUTE_TRENDS = "trends"
 private const val ROUTE_ADD_EDIT_RECORD = "add_edit_record"
@@ -96,6 +100,30 @@ fun AppNavigation(startLoggedIn: Boolean) {
                         navController.navigate(ROUTE_RECORD_LIST) {
                             popUpTo(ROUTE_LOGIN) { inclusive = true }
                         }
+                    },
+                    onNavigateToRegister = {
+                        navController.navigate(ROUTE_REGISTER)
+                    },
+                    onNavigateToForgotPassword = {
+                        navController.navigate(ROUTE_FORGOT_PASSWORD)
+                    },
+                    onNavigateToEmailVerification = {
+                        navController.navigate(ROUTE_EMAIL_VERIFICATION) {
+                            popUpTo(ROUTE_LOGIN) { inclusive = true }
+                        }
+                    },
+                )
+            }
+
+            composable(ROUTE_REGISTER) {
+                RegisterScreen(
+                    onRegisterSuccess = {
+                        navController.navigate(ROUTE_EMAIL_VERIFICATION) {
+                            popUpTo(ROUTE_LOGIN) { inclusive = true }
+                        }
+                    },
+                    onNavigateToLogin = {
+                        navController.popBackStack()
                     },
                 )
             }

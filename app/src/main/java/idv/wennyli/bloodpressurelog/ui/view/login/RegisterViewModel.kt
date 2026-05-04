@@ -15,23 +15,21 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class LoginUiState(
+data class RegisterUiState(
     val email: String = "",
     val password: String = "",
+    val confirmPassword: String = "",
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
 )
 
 @HiltViewModel
-class LoginViewModel @Inject constructor(
+class RegisterViewModel @Inject constructor(
     private val authRepository: AuthRepository,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(LoginUiState())
-    val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
-
-    private val _navigateToMain = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val navigateToMain: SharedFlow<Unit> = _navigateToMain.asSharedFlow()
+    private val _uiState = MutableStateFlow(RegisterUiState())
+    val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
     private val _navigateToEmailVerification = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val navigateToEmailVerification: SharedFlow<Unit> = _navigateToEmailVerification.asSharedFlow()
@@ -44,42 +42,23 @@ class LoginViewModel @Inject constructor(
         _uiState.update { it.copy(password = password, errorMessage = null) }
     }
 
-    fun signInWithEmail() {
+    fun onConfirmPasswordChange(confirmPassword: String) {
+        _uiState.update { it.copy(confirmPassword = confirmPassword, errorMessage = null) }
+    }
+
+    fun register(passwordMismatchError: String) {
         val state = _uiState.value
+        if (state.password != state.confirmPassword) {
+            _uiState.update { it.copy(errorMessage = passwordMismatchError) }
+            return
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            when (val result = authRepository.signInWithEmail(state.email, state.password)) {
-                is DataState.Success -> _navigateToMain.emit(Unit)
-                is DataState.Error -> _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = result.message
-                    )
-                }
-
+            when (val result = authRepository.registerWithEmail(state.email, state.password)) {
+                is DataState.Success -> _navigateToEmailVerification.emit(Unit)
+                is DataState.Error -> _uiState.update { it.copy(isLoading = false, errorMessage = result.message) }
                 is DataState.Loading -> Unit
             }
         }
-    }
-
-    fun signInAnonymously() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            when (val result = authRepository.signInAnonymously()) {
-                is DataState.Success -> _navigateToMain.emit(Unit)
-                is DataState.Error -> _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = result.message
-                    )
-                }
-
-                is DataState.Loading -> Unit
-            }
-        }
-    }
-
-    fun clearError() {
-        _uiState.update { it.copy(errorMessage = null) }
     }
 }

@@ -7,6 +7,8 @@
     <string name="label_password">Password</string>
     <string name="button_login">Login</string>
     <string name="button_anonymous_login_debug">Anonymous Login (Debug)</string>
+    <string name="link_forgot_password">忘記密碼？</string>
+    <string name="link_register">還沒有帳號？立即註冊</string>
 
     <!-- Main Screen -->
     <string name="main_welcome">Welcome!</string>
@@ -55,6 +57,26 @@
     <string name="time_slot_afternoon">下午</string>
     <string name="time_slot_evening">晚間</string>
     <string name="time_slot_night">深夜</string>
+
+    <!-- Register Screen -->
+    <string name="screen_title_register">建立帳號</string>
+    <string name="label_confirm_password">確認密碼</string>
+    <string name="button_register">註冊</string>
+    <string name="link_already_have_account">已有帳號？返回登入</string>
+    <string name="error_passwords_do_not_match">兩次輸入的密碼不一致</string>
+
+    <!-- Email Verification Screen -->
+    <string name="screen_title_email_verification">驗證您的 Email</string>
+    <string name="email_verification_message">驗證信已寄送至\n%1$s\n\n請點擊信件中的連結完成驗證後，再返回登入。</string>
+    <string name="button_resend_verification_email">重新發送驗證信</string>
+    <string name="button_resend_cooldown">重新發送（%1$ds）</string>
+    <string name="button_back_to_login">返回登入</string>
+
+    <!-- Forgot Password Screen -->
+    <string name="screen_title_forgot_password">重設密碼</string>
+    <string name="forgot_password_description">輸入您的 Email，我們將寄送密碼重設連結。</string>
+    <string name="button_send_reset_link">傳送重設連結</string>
+    <string name="forgot_password_success_message">密碼重設信已寄出，請查收信箱。</string>
 
     <!-- Bottom Navigation Labels -->
     <string name="nav_label_records">紀錄</string>
