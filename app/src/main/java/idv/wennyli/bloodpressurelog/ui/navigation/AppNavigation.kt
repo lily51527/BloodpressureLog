@@ -40,9 +40,18 @@ private val BOTTOM_NAV_ROUTES = setOf(ROUTE_RECORD_LIST, ROUTE_TRENDS)
 fun AppNavigation(startLoggedIn: Boolean) {
     val navController = rememberNavController()
     val startDestination = if (startLoggedIn) ROUTE_RECORD_LIST else ROUTE_LOGIN
+    val mainViewModel: MainViewModel = hiltViewModel()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
+    LaunchedEffect(Unit) {
+        mainViewModel.signedOut.collect {
+            navController.navigate(ROUTE_LOGIN) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -90,14 +99,6 @@ fun AppNavigation(startLoggedIn: Boolean) {
             }
 
             composable(ROUTE_RECORD_LIST) {
-                val mainViewModel: MainViewModel = hiltViewModel()
-                LaunchedEffect(Unit) {
-                    mainViewModel.signedOut.collect {
-                        navController.navigate(ROUTE_LOGIN) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    }
-                }
                 RecordListScreen(
                     onSignOut = mainViewModel::signOut,
                     onNavigateToAddEdit = { recordId ->
