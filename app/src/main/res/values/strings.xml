@@ -4,15 +4,11 @@
     <!-- Login Screen -->
     <string name="login_title">Blood Pressure Log</string>
     <string name="label_email">Email</string>
-    <string name="label_password">Password</string>
-    <string name="button_login">Login</string>
-    <string name="button_anonymous_login_debug">Anonymous Login (Debug)</string>
+    <string name="label_password">密碼</string>
+    <string name="button_login">登入</string>
+    <string name="button_anonymous_login_debug">匿名登入（測試用）</string>
     <string name="link_forgot_password">忘記密碼？</string>
     <string name="link_register">還沒有帳號？立即註冊</string>
-
-    <!-- Main Screen -->
-    <string name="main_welcome">Welcome!</string>
-    <string name="button_sign_out">Sign Out</string>
 
     <!-- Common Buttons / Actions -->
     <string name="button_delete">刪除</string>
