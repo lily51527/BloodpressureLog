@@ -2,32 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 回覆語言
+## 專案文件
 
-所有回覆一律使用**繁體中文**。
-
-## 套件安裝規範
-
-禁止擅自安裝任何軟體或第三方套件，包含但不限於：
-
-- Gradle 依賴（`build.gradle.kts` 或 `libs.versions.toml` 新增套件）
-- 系統軟體（`brew install` 等）
-- 任何其他工具或 CLI
-
-若判斷需要安裝新套件，必須先向使用者說明：
-1. 套件名稱
-2. 安裝原因（用途是什麼）
-3. 安裝方式
-
-由使用者確認後才能執行安裝。
-
-## 工作目錄規則
-
-所有程式碼修改必須直接在專案主目錄（`/Users/wenyi_li/AndroidStudioProjects/BloodPressureLog`）進行，不可只修改 worktree（`.claude/worktrees/` 下的目錄）。若目前環境是在 worktree 內，請改以主目錄的絕對路徑操作檔案。
-
-## 開發規範
-
-實作任何功能或邏輯後，須在 `app/src/test/` 中補上對應的 unit test。
+本專案的開發紀錄、設計決策、功能規格等文件，統一存放於 Notion 的 **BloodPressureLog 開發紀錄** database。
 
 ## Build & Test Commands
 
@@ -65,14 +42,13 @@ idv.wennyli.bloodpressurelog/
 ├── data/
 │   ├── model/       # Data classes (BloodPressureRecord, TimeSlot, etc.)
 │   └── repository/  # Repository interfaces & implementations
-├── di/              # Hilt modules (AppModule, ConfigModule)
+├── di/              # Hilt modules (AppModule)
 ├── ui/
 │   ├── navigation/  # Navigation graphs
 │   ├── view/        # Feature screens, each with ViewModel + Composable
-│   │   ├── login/
+│   │   ├── login/   # Login, Register, EmailVerification, ForgotPassword
 │   │   ├── record/  # 血壓紀錄列表 + 新增/編輯
-│   │   ├── trends/  # 趨勢圖表
-│   │   └── settings/
+│   │   └── trends/  # 趨勢圖表
 │   └── theme/       # Material3 color, typography, theme
 └── utils/           # 共用工具（DateUtils, FirestorePaths 等）
 ```
@@ -96,6 +72,40 @@ artifacts/{appId}/users/{userId}/
 
 `appId` 由 `BuildConfig.APP_ID` 注入，debug / release 使用不同值以隔離資料。
 
+Firebase 設定檔（`firebase.json`、`firestore.rules`）位於獨立的 backend 專案：
+
+```
+/Users/wenyi_li/Backend Project/BloodPressureLog-app-backend/
+├── firebase.json
+└── firestore.rules
+```
+
+### Navigation Flow
+
+```
+Login ──► Register ──► EmailVerification ──► Login
+     └──► ForgotPassword (pop back)
+     └──► EmailVerification（已登入但未驗證時）
+
+RecordList ◄──► AddEditRecord（新增傳 null，編輯傳 recordId）
+RecordList ◄──► Trends（BottomNav 切換）
+```
+
+- `MainViewModel` 監聽 `authStateChanges`，用戶登出時強制導回 Login 並清除 back stack
+- `AppNavigation` 以 `startLoggedIn` 參數決定初始路由（`record_list` 或 `login`）
+
+### DataState
+
+所有非同步操作以 `DataState<T>` 回傳：
+
+```kotlin
+sealed interface DataState<out T> {
+    data object Loading : DataState<Nothing>
+    data class Success<T>(val data: T) : DataState<T>
+    data class Error(val throwable: Throwable, val message: String) : DataState<Nothing>
+}
+```
+
 ### Data Flow
 
 - ViewModel 透過 Repository 取得 `Flow<List<BloodPressureRecord>>`，轉為 `StateFlow` 供 Composable 訂閱
@@ -116,23 +126,13 @@ artifacts/{appId}/users/{userId}/
 | 第一期高血壓 | 130–139 | 80–89 | 橘色 |
 | 第二期高血壓 | ≥ 140 | ≥ 90 | 紅色 |
 
-### Dependency Versions
+## Test Pattern
 
-統一在 `gradle/libs.versions.toml` 管理，禁止在 `build.gradle.kts` 內寫 inline 版本號。
+所有 ViewModel 測試需使用 `MainDispatcherRule`（位於 `app/src/test/.../MainDispatcherRule.kt`）替換 Main Dispatcher：
 
-## S.O.L.I.D 原則
+```kotlin
+@get:Rule
+val mainDispatcherRule = MainDispatcherRule()
+```
 
-### S — Single Responsibility Principle（單一職責）
-每個類別只負責一件事。ViewModel 只處理 UI 狀態，Repository 只處理資料存取，不混用。
-
-### O — Open/Closed Principle（開放封閉）
-對擴充開放、對修改封閉。新增血壓等級或時間段時，擴充 enum / sealed class，不修改現有判斷邏輯。
-
-### L — Liskov Substitution Principle（里氏替換）
-實作類別可以完全替換介面。`BloodPressureRepositoryImpl` 必須完整實作 `BloodPressureRepository` 介面定義的行為，測試用的 fake repository 同理。
-
-### I — Interface Segregation Principle（介面隔離）
-介面只定義呼叫方實際需要的方法，不強迫實作不需要的功能。每個 Repository 介面只定義該資料域的操作，不合併成一個大介面。
-
-### D — Dependency Inversion Principle（依賴反轉）
-高層模組依賴介面，不依賴具體實作。ViewModel 依賴 `BloodPressureRepository` 介面，由 Hilt 注入具體實作，方便替換與測試。
+Repository 測試使用 fake 實作（需完整實作介面），不依賴真實 Firebase。
