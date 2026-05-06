@@ -181,8 +181,11 @@ private fun TrendChart(
         }
     }
 
-    val valueFormatter = CartesianValueFormatter { _, value, _ ->
-        xLabels.getOrElse(value.toInt()) { " " }
+    val valueFormatter = remember(xLabels) {
+        CartesianValueFormatter { _, value, _ ->
+            val index = value.toInt()
+            xLabels.getOrElse(index) { index.toString() }
+        }
     }
 
     CartesianChartHost(
