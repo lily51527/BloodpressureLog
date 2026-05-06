@@ -6,31 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 本專案的開發紀錄、設計決策、功能規格等文件，統一存放於 Notion 的 **BloodPressureLog 開發紀錄** database。
 
-## Build & Test Commands
-
-```bash
-# Build debug APK
-./gradlew assembleDebug
-
-# Install to connected device
-./gradlew installDebug
-
-# Run unit tests
-./gradlew testDebugUnitTest
-
-# Run a single test class
-./gradlew testDebugUnitTest --tests "idv.wennyli.bloodpressurelog.YourTestClass"
-
-# Run instrumented tests (requires device/emulator)
-./gradlew connectedAndroidTest
-
-# Lint
-./gradlew lint
-
-# Clean
-./gradlew clean
-```
-
 ## Architecture
 
 **MVVM + Hilt DI + Jetpack Compose**，targeting Android 7.0+ (minSdk 24)。
@@ -40,17 +15,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 idv.wennyli.bloodpressurelog/
 ├── data/
-│   ├── model/       # Data classes (BloodPressureRecord, TimeSlot, etc.)
+│   ├── model/       # Data classes (BloodPressureRecord, TimeSlot, BloodPressureLevel, DataState)
 │   └── repository/  # Repository interfaces & implementations
-├── di/              # Hilt modules (AppModule)
+├── di/              # Hilt modules (AppModule 負責 Firebase + Repository 綁定)
 ├── ui/
-│   ├── navigation/  # Navigation graphs
-│   ├── view/        # Feature screens, each with ViewModel + Composable
+│   ├── navigation/  # AppNavigation（含 BottomNav + NavHost）
+│   ├── view/        # Feature screens，每個 feature 各有 ViewModel + Composable
 │   │   ├── login/   # Login, Register, EmailVerification, ForgotPassword
+│   │   ├── main/    # MainViewModel（監聽 auth state）
 │   │   ├── record/  # 血壓紀錄列表 + 新增/編輯
-│   │   └── trends/  # 趨勢圖表
+│   │   └── trends/  # 趨勢圖表（Vico 折線圖）
 │   └── theme/       # Material3 color, typography, theme
-└── utils/           # 共用工具（DateUtils, FirestorePaths 等）
+└── utils/           # DateUtils, FirebaseAuthErrorMapper, FirestorePaths
 ```
 
 ### Key Tech Stack
@@ -61,6 +37,7 @@ idv.wennyli.bloodpressurelog/
 | Navigation | Navigation Compose |
 | DI | Hilt (KSP) |
 | Backend | Firebase Auth + Firestore |
+| Charting | Vico (`com.patrykandpatrick.vico:compose-m3`) |
 | Language | Kotlin / JVM 17 |
 
 ### Firebase 路徑結構
@@ -70,7 +47,7 @@ artifacts/{appId}/users/{userId}/
   └── bloodPressures/    # 血壓紀錄
 ```
 
-`appId` 由 `BuildConfig.APP_ID` 注入，debug / release 使用不同值以隔離資料。
+`appId` 由 `BuildConfig.APP_ID` 注入，debug / release 使用不同值以隔離資料。路徑由 `FirestorePaths.bloodPressures(appId, userId)` 產生。
 
 Firebase 設定檔（`firebase.json`、`firestore.rules`）位於獨立的 backend 專案：
 
@@ -93,6 +70,7 @@ RecordList ◄──► Trends（BottomNav 切換）
 
 - `MainViewModel` 監聽 `authStateChanges`，用戶登出時強制導回 Login 並清除 back stack
 - `AppNavigation` 以 `startLoggedIn` 參數決定初始路由（`record_list` 或 `login`）
+- `NavHost` 套用 `consumeWindowInsets(innerPadding)` 防止內層 Scaffold 重複消費 window insets
 
 ### DataState
 
@@ -108,7 +86,7 @@ sealed interface DataState<out T> {
 
 ### Data Flow
 
-- ViewModel 透過 Repository 取得 `Flow<List<BloodPressureRecord>>`，轉為 `StateFlow` 供 Composable 訂閱
+- ViewModel 透過 Repository 取得 `Flow<DataState<List<BloodPressureRecord>>>`，轉為 `StateFlow` 供 Composable 訂閱
 - Firestore 使用 `addSnapshotListener` 即時同步，無本地 Room DB
 - Hilt 管理所有依賴注入；`BloodPressureApplication` 為 `@HiltAndroidApp` 進入點
 
@@ -126,13 +104,14 @@ sealed interface DataState<out T> {
 | 第一期高血壓 | 130–139 | 80–89 | 橘色 |
 | 第二期高血壓 | ≥ 140 | ≥ 90 | 紅色 |
 
-## Test Pattern
+判斷邏輯在 `bloodPressureLevel(systolic, diastolic)` 函式（`BloodPressureLevel.kt`）。
 
-所有 ViewModel 測試需使用 `MainDispatcherRule`（位於 `app/src/test/.../MainDispatcherRule.kt`）替換 Main Dispatcher：
+### 重要領域邏輯
 
-```kotlin
-@get:Rule
-val mainDispatcherRule = MainDispatcherRule()
-```
+- `BloodPressureRecord.timeSlot`：extension property，依 `recordedAt` 小時判斷時段（早上 6–11、下午 12–17、晚上 18–23、夜間其他）
+- `TrendsViewModel.buildChartData`：將 records 依日期分組，計算各日平均值，x 軸為相對於 startDate 的 dayIndex
 
-Repository 測試使用 fake 實作（需完整實作介面），不依賴真實 Firebase。
+### Vico 圖表注意事項
+
+`CartesianValueFormatter` 回傳的字串**不可為空字串或純空白**（Vico 內部以 `isNotBlank()` 驗證，違反時拋出 `IllegalStateException`）。fallback 值應使用 `index.toString()` 而非 `" "`。
+
