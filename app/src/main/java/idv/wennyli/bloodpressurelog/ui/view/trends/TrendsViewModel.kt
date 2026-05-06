@@ -7,9 +7,10 @@ import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -44,72 +45,60 @@ class TrendsViewModel @Inject constructor(
     private val repository: BloodPressureRepository,
 ) : ViewModel() {
 
-    private val _allRecords = MutableStateFlow<List<BloodPressureRecord>>(emptyList())
-    private val _uiState = MutableStateFlow(TrendsUiState())
-    val uiState: StateFlow<TrendsUiState> = _uiState.asStateFlow()
+    private val _recordsState =
+        MutableStateFlow<DataState<List<BloodPressureRecord>>>(DataState.Loading)
+    private val _selectedRange = MutableStateFlow(TrendRange.DAYS_7)
+    private val _selectedMetric = MutableStateFlow(TrendMetric.SYSTOLIC)
+
+    val uiState: StateFlow<TrendsUiState> = combine(
+        _recordsState,
+        _selectedRange,
+        _selectedMetric,
+    ) { state, range, metric ->
+        when (state) {
+            is DataState.Loading -> TrendsUiState(
+                isLoading = true,
+                selectedRange = range,
+                selectedMetric = metric
+            )
+
+            is DataState.Error -> TrendsUiState(
+                isLoading = false,
+                selectedRange = range,
+                selectedMetric = metric,
+                errorMessage = state.message
+            )
+
+            is DataState.Success -> {
+                val (points, labels) = buildChartData(state.data, range, metric)
+                TrendsUiState(
+                    chartPoints = points,
+                    xLabels = labels,
+                    selectedRange = range,
+                    selectedMetric = metric,
+                    isLoading = false,
+                    isEmpty = points.isEmpty(),
+                )
+            }
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = TrendsUiState(),
+    )
 
     init {
         viewModelScope.launch {
-            repository.observeRecords().collect { dataState ->
-                when (dataState) {
-                    is DataState.Loading -> _uiState.update { it.copy(isLoading = true) }
-                    is DataState.Success -> {
-                        _allRecords.value = dataState.data
-                        val current = _uiState.value
-                        val (points, labels) = buildChartData(
-                            dataState.data,
-                            current.selectedRange,
-                            current.selectedMetric
-                        )
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                chartPoints = points,
-                                xLabels = labels,
-                                isEmpty = points.isEmpty(),
-                                errorMessage = null
-                            )
-                        }
-                    }
-
-                    is DataState.Error -> _uiState.update {
-                        it.copy(isLoading = false, errorMessage = dataState.message)
-                    }
-                }
-            }
+            repository.observeRecords().collect { _recordsState.value = it }
         }
     }
 
     fun onRangeChange(range: TrendRange) {
-        val (points, labels) = buildChartData(
-            _allRecords.value,
-            range,
-            _uiState.value.selectedMetric
-        )
-        _uiState.update {
-            it.copy(
-                selectedRange = range,
-                chartPoints = points,
-                xLabels = labels,
-                isEmpty = points.isEmpty()
-            )
-        }
+        _selectedRange.value = range
     }
 
     fun onMetricChange(metric: TrendMetric) {
-        val (points, labels) = buildChartData(
-            _allRecords.value,
-            _uiState.value.selectedRange,
-            metric
-        )
-        _uiState.update {
-            it.copy(
-                selectedMetric = metric,
-                chartPoints = points,
-                xLabels = labels,
-                isEmpty = points.isEmpty()
-            )
-        }
+        _selectedMetric.value = metric
     }
 
     internal fun buildChartData(
