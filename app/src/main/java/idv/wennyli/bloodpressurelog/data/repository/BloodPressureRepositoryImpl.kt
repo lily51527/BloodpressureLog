@@ -4,6 +4,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
 import idv.wennyli.bloodpressurelog.BuildConfig
 import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.data.model.DataState
@@ -20,16 +21,24 @@ class BloodPressureRepositoryImpl @Inject constructor(
     private val auth: FirebaseAuth,
 ) : BloodPressureRepository {
 
-    private fun recordsCollection() = firestore.collection(
-        FirestorePaths.bloodPressures(BuildConfig.APP_ID, requireUserId())
-    )
-
-    private fun requireUserId(): String =
-        auth.currentUser?.uid ?: error("User not authenticated")
+    private fun recordsCollection() = auth.currentUser?.uid?.let { uid ->
+        firestore.collection(FirestorePaths.bloodPressures(BuildConfig.APP_ID, uid))
+    }
 
     override fun observeRecords(): Flow<DataState<List<BloodPressureRecord>>> = callbackFlow {
+        val collection = recordsCollection()
+        if (collection == null) {
+            trySend(
+                DataState.Error(
+                    IllegalStateException("User not authenticated"),
+                    NOT_AUTHENTICATED_MSG
+                )
+            )
+            close()
+            return@callbackFlow
+        }
         trySend(DataState.Loading)
-        val subscription = recordsCollection()
+        val subscription = collection
             .orderBy("recordedAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -43,10 +52,14 @@ class BloodPressureRepositoryImpl @Inject constructor(
         awaitClose { subscription.remove() }
     }
 
-    override suspend fun getRecord(id: String): DataState<BloodPressureRecord?> =
-        suspendCancellableCoroutine { continuation ->
-            recordsCollection()
-                .document(id)
+    override suspend fun getRecord(id: String): DataState<BloodPressureRecord?> {
+        val collection = recordsCollection()
+            ?: return DataState.Error(
+                IllegalStateException("User not authenticated"),
+                NOT_AUTHENTICATED_MSG
+            )
+        return suspendCancellableCoroutine { continuation ->
+            collection.document(id)
                 .get()
                 .addOnSuccessListener { document ->
                     continuation.resume(DataState.Success(document.toBloodPressureRecord()))
@@ -55,39 +68,59 @@ class BloodPressureRepositoryImpl @Inject constructor(
                     continuation.resume(DataState.Error(e, e.message ?: "Failed to get record"))
                 }
         }
+    }
 
-    override suspend fun addRecord(record: BloodPressureRecord): DataState<Unit> =
-        suspendCancellableCoroutine { continuation ->
-            val now = System.currentTimeMillis()
-            recordsCollection()
-                .add(record.toMap(createdAt = now, updatedAt = now))
+    override suspend fun addRecord(record: BloodPressureRecord): DataState<Unit> {
+        val collection = recordsCollection()
+            ?: return DataState.Error(
+                IllegalStateException("User not authenticated"),
+                NOT_AUTHENTICATED_MSG
+            )
+        val now = System.currentTimeMillis()
+        return suspendCancellableCoroutine { continuation ->
+            collection.add(record.toAddMap(createdAt = now, updatedAt = now))
                 .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
                 .addOnFailureListener { e ->
                     continuation.resume(DataState.Error(e, e.message ?: "Failed to add record"))
                 }
         }
+    }
 
-    override suspend fun updateRecord(record: BloodPressureRecord): DataState<Unit> =
-        suspendCancellableCoroutine { continuation ->
-            recordsCollection()
-                .document(record.id)
-                .set(record.toMap(updatedAt = System.currentTimeMillis()))
+    override suspend fun updateRecord(record: BloodPressureRecord): DataState<Unit> {
+        val collection = recordsCollection()
+            ?: return DataState.Error(
+                IllegalStateException("User not authenticated"),
+                NOT_AUTHENTICATED_MSG
+            )
+        return suspendCancellableCoroutine { continuation ->
+            collection.document(record.id)
+                .set(record.toUpdateMap(updatedAt = System.currentTimeMillis()), SetOptions.merge())
                 .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
                 .addOnFailureListener { e ->
                     continuation.resume(DataState.Error(e, e.message ?: "Failed to update record"))
                 }
         }
+    }
 
-    override suspend fun deleteRecord(id: String): DataState<Unit> =
-        suspendCancellableCoroutine { continuation ->
-            recordsCollection()
-                .document(id)
+    override suspend fun deleteRecord(id: String): DataState<Unit> {
+        val collection = recordsCollection()
+            ?: return DataState.Error(
+                IllegalStateException("User not authenticated"),
+                NOT_AUTHENTICATED_MSG
+            )
+        return suspendCancellableCoroutine { continuation ->
+            collection.document(id)
                 .delete()
                 .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
                 .addOnFailureListener { e ->
                     continuation.resume(DataState.Error(e, e.message ?: "Failed to delete record"))
                 }
         }
+    }
+
+    companion object {
+        private const val NOT_AUTHENTICATED_MSG = "請重新登入"
+    }
 }
 
 private fun com.google.firebase.firestore.DocumentSnapshot.toBloodPressureRecord(): BloodPressureRecord? =
@@ -106,16 +139,23 @@ private fun com.google.firebase.firestore.DocumentSnapshot.toBloodPressureRecord
         null
     }
 
-private fun BloodPressureRecord.toMap(
-    createdAt: Long = this.createdAt,
-    updatedAt: Long = this.updatedAt,
-): Map<String, Any> = mapOf(
+private fun BloodPressureRecord.toAddMap(createdAt: Long, updatedAt: Long): Map<String, Any> =
+    mapOf(
+        "systolic" to systolic,
+        "diastolic" to diastolic,
+        "pulse" to pulse,
+        "note" to note,
+        "recordedAt" to recordedAt.toTimestamp(),
+        "createdAt" to createdAt.toTimestamp(),
+        "updatedAt" to updatedAt.toTimestamp(),
+    )
+
+private fun BloodPressureRecord.toUpdateMap(updatedAt: Long): Map<String, Any> = mapOf(
     "systolic" to systolic,
     "diastolic" to diastolic,
     "pulse" to pulse,
     "note" to note,
     "recordedAt" to recordedAt.toTimestamp(),
-    "createdAt" to createdAt.toTimestamp(),
     "updatedAt" to updatedAt.toTimestamp(),
 )
 

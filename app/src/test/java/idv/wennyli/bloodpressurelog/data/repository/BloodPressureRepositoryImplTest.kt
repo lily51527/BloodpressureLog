@@ -228,7 +228,7 @@ class BloodPressureRepositoryImplTest {
     @Test
     fun `updateRecord returns Success on Firestore success`() = runTest {
         val task = buildSuccessTask<Void>(null)
-        every { mockDocumentRef.set(any()) } returns task
+        every { mockDocumentRef.set(any(), any()) } returns task
 
         val result = repository.updateRecord(sampleRecord(id = "doc-1"))
 
@@ -239,12 +239,67 @@ class BloodPressureRepositoryImplTest {
     fun `updateRecord returns Error on Firestore failure`() = runTest {
         val exception = RuntimeException("update failed")
         val task = buildFailureTask<Void>(exception)
-        every { mockDocumentRef.set(any()) } returns task
+        every { mockDocumentRef.set(any(), any()) } returns task
 
         val result = repository.updateRecord(sampleRecord(id = "doc-1"))
 
         assertTrue(result is DataState.Error)
         assertEquals("update failed", (result as DataState.Error).message)
+    }
+
+    // endregion
+
+    // region unauthenticated
+
+    @Test
+    fun `observeRecords emits Error immediately when user is null`() = runTest {
+        every { mockAuth.currentUser } returns null
+
+        repository.observeRecords().test {
+            val error = awaitItem() as DataState.Error
+            assertEquals("請重新登入", error.message)
+            awaitComplete()
+        }
+    }
+
+    @Test
+    fun `getRecord returns Error when user is null`() = runTest {
+        every { mockAuth.currentUser } returns null
+
+        val result = repository.getRecord("doc-1")
+
+        assertTrue(result is DataState.Error)
+        assertEquals("請重新登入", (result as DataState.Error).message)
+    }
+
+    @Test
+    fun `addRecord returns Error when user is null`() = runTest {
+        every { mockAuth.currentUser } returns null
+
+        val result = repository.addRecord(sampleRecord())
+
+        assertTrue(result is DataState.Error)
+        assertEquals("請重新登入", (result as DataState.Error).message)
+    }
+
+    @Test
+    fun `updateRecord returns Error when user is null`() = runTest {
+        every { mockAuth.currentUser } returns null
+
+        val result = repository.updateRecord(sampleRecord(id = "doc-1"))
+
+        assertTrue(result is DataState.Error)
+        assertEquals("請重新登入", (result as DataState.Error).message)
+    }
+
+    @Test
+    fun `deleteRecord returns Error when user is null`() = runTest {
+        every { mockAuth.currentUser } returns null
+
+        val result = repository.deleteRecord("doc-1")
+
+        assertTrue(result is DataState.Error)
+        assertEquals("請重新登入", (result as DataState.Error).message)
     }
 
     // endregion
