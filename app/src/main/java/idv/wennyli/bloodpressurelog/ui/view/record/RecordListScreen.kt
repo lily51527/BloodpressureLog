@@ -70,6 +70,7 @@ fun RecordListScreen(
     }
 
     var recordIdToDelete by remember { mutableStateOf<String?>(null) }
+    val deleteFailedMessage = stringResource(R.string.error_delete_record_failed)
 
     if (recordIdToDelete != null) {
         AlertDialog(
@@ -79,7 +80,10 @@ fun RecordListScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.deleteRecord(recordIdToDelete!!)
+                        viewModel.deleteRecord(
+                            id = recordIdToDelete!!,
+                            onDeleteFailed = deleteFailedMessage,
+                        )
                         recordIdToDelete = null
                     },
                 ) {

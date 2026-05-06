@@ -109,9 +109,30 @@ class RecordListViewModelTest {
     fun `deleteRecord calls repository deleteRecord with correct id`() = runTest {
         coEvery { mockRepository.deleteRecord(any()) } returns DataState.Success(Unit)
 
-        viewModel.deleteRecord("record-456")
+        viewModel.deleteRecord("record-456", "刪除失敗，請稍後再試")
 
         coVerify { mockRepository.deleteRecord("record-456") }
+    }
+
+    @Test
+    fun `deleteRecord sets errorMessage on failure`() = runTest {
+        val error = RuntimeException("Firestore error")
+        coEvery { mockRepository.deleteRecord(any()) } returns DataState.Error(error, "Firestore error")
+
+        viewModel.deleteRecord("record-456", "刪除失敗，請稍後再試")
+
+        assertEquals("刪除失敗，請稍後再試", viewModel.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun `deleteRecord does not set errorMessage on success`() = runTest {
+        every { mockRepository.observeRecords() } returns flowOf(DataState.Success(emptyList()))
+        viewModel = RecordListViewModel(mockRepository, mockAuthRepository)
+        coEvery { mockRepository.deleteRecord(any()) } returns DataState.Success(Unit)
+
+        viewModel.deleteRecord("record-456", "刪除失敗，請稍後再試")
+
+        assertNull(viewModel.uiState.value.errorMessage)
     }
 
     @Test
