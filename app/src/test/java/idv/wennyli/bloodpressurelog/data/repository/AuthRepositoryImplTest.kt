@@ -59,7 +59,7 @@ class AuthRepositoryImplTest {
         val result = repository.signInWithEmail("test@test.com", "wrong")
 
         assertTrue(result is DataState.Error)
-        assertEquals("Invalid credentials", (result as DataState.Error).message)
+        assertEquals("操作失敗，請稍後再試", (result as DataState.Error).message)
     }
 
     @Test
@@ -81,7 +81,7 @@ class AuthRepositoryImplTest {
         val result = repository.signInAnonymously()
 
         assertTrue(result is DataState.Error)
-        assertEquals("Anonymous sign in failed", (result as DataState.Error).message)
+        assertEquals("操作失敗，請稍後再試", (result as DataState.Error).message)
     }
 
     @Test

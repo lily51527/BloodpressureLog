@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import idv.wennyli.bloodpressurelog.data.model.DataState
+import idv.wennyli.bloodpressurelog.utils.toChineseAuthErrorMessage
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -29,7 +30,7 @@ class AuthRepositoryImpl @Inject constructor(
             auth.signInWithEmailAndPassword(email, password)
                 .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
                 .addOnFailureListener { e ->
-                    continuation.resume(DataState.Error(e, e.message ?: "Sign in failed"))
+                    continuation.resume(DataState.Error(e, e.toChineseAuthErrorMessage()))
                 }
         }
 
@@ -38,7 +39,7 @@ class AuthRepositoryImpl @Inject constructor(
             auth.signInAnonymously()
                 .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
                 .addOnFailureListener { e ->
-                    continuation.resume(DataState.Error(e, e.message ?: "Anonymous sign in failed"))
+                    continuation.resume(DataState.Error(e, e.toChineseAuthErrorMessage()))
                 }
         }
 
@@ -54,13 +55,13 @@ class AuthRepositoryImpl @Inject constructor(
                     continuation.resume(DataState.Success(Unit))
                 }
                 .addOnFailureListener { e ->
-                    continuation.resume(DataState.Error(e, e.message ?: "Registration failed"))
+                    continuation.resume(DataState.Error(e, e.toChineseAuthErrorMessage()))
                 }
         }
 
     override suspend fun sendEmailVerification(): DataState<Unit> {
         val user = auth.currentUser
-            ?: return DataState.Error(IllegalStateException("No user"), "No signed-in user")
+            ?: return DataState.Error(IllegalStateException("No user"), "操作失敗，請稍後再試")
         return suspendCancellableCoroutine { continuation ->
             user.sendEmailVerification()
                 .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
@@ -68,7 +69,7 @@ class AuthRepositoryImpl @Inject constructor(
                     continuation.resume(
                         DataState.Error(
                             e,
-                            e.message ?: "Failed to send verification email"
+                            e.toChineseAuthErrorMessage()
                         )
                     )
                 }
@@ -83,7 +84,7 @@ class AuthRepositoryImpl @Inject constructor(
                     continuation.resume(
                         DataState.Error(
                             e,
-                            e.message ?: "Failed to send password reset email"
+                            e.toChineseAuthErrorMessage()
                         )
                     )
                 }
