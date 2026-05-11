@@ -1,10 +1,13 @@
 package idv.wennyli.bloodpressurelog.data.repository
 
+import android.content.Context
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import dagger.hilt.android.qualifiers.ApplicationContext
+import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.data.model.DataState
-import idv.wennyli.bloodpressurelog.utils.toChineseAuthErrorMessage
+import idv.wennyli.bloodpressurelog.utils.toAuthErrorStringRes
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -14,6 +17,7 @@ import kotlin.coroutines.resume
 
 class AuthRepositoryImpl @Inject constructor(
     private val auth: FirebaseAuth,
+    @ApplicationContext private val context: Context,
 ) : AuthRepository {
 
     override val currentUser: FirebaseUser?
@@ -30,7 +34,7 @@ class AuthRepositoryImpl @Inject constructor(
             auth.signInWithEmailAndPassword(email, password)
                 .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
                 .addOnFailureListener { e ->
-                    continuation.resume(DataState.Error(e, e.toChineseAuthErrorMessage()))
+                    continuation.resume(DataState.Error(e, context.getString(e.toAuthErrorStringRes())))
                 }
         }
 
@@ -39,7 +43,7 @@ class AuthRepositoryImpl @Inject constructor(
             auth.signInAnonymously()
                 .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
                 .addOnFailureListener { e ->
-                    continuation.resume(DataState.Error(e, e.toChineseAuthErrorMessage()))
+                    continuation.resume(DataState.Error(e, context.getString(e.toAuthErrorStringRes())))
                 }
         }
 
@@ -55,22 +59,22 @@ class AuthRepositoryImpl @Inject constructor(
                     continuation.resume(DataState.Success(Unit))
                 }
                 .addOnFailureListener { e ->
-                    continuation.resume(DataState.Error(e, e.toChineseAuthErrorMessage()))
+                    continuation.resume(DataState.Error(e, context.getString(e.toAuthErrorStringRes())))
                 }
         }
 
     override suspend fun sendEmailVerification(): DataState<Unit> {
         val user = auth.currentUser
-            ?: return DataState.Error(IllegalStateException("No user"), "操作失敗，請稍後再試")
+            ?: return DataState.Error(
+                IllegalStateException("No user"),
+                context.getString(R.string.error_auth_generic),
+            )
         return suspendCancellableCoroutine { continuation ->
             user.sendEmailVerification()
                 .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
                 .addOnFailureListener { e ->
                     continuation.resume(
-                        DataState.Error(
-                            e,
-                            e.toChineseAuthErrorMessage()
-                        )
+                        DataState.Error(e, context.getString(e.toAuthErrorStringRes()))
                     )
                 }
         }
@@ -82,10 +86,7 @@ class AuthRepositoryImpl @Inject constructor(
                 .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
                 .addOnFailureListener { e ->
                     continuation.resume(
-                        DataState.Error(
-                            e,
-                            e.toChineseAuthErrorMessage()
-                        )
+                        DataState.Error(e, context.getString(e.toAuthErrorStringRes()))
                     )
                 }
         }
