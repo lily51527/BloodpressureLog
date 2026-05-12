@@ -3,10 +3,11 @@ package idv.wennyli.bloodpressurelog.ui.view.login
 import app.cash.turbine.test
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
 import com.google.firebase.auth.FirebaseUser
-import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
+import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -14,7 +15,6 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -61,7 +61,7 @@ class LoginViewModelTest {
         val mockUser = mockk<FirebaseUser>()
         every { mockUser.isEmailVerified } returns true
         every { mockAuthRepository.currentUser } returns mockUser
-        coEvery { mockAuthRepository.signInWithEmail(any(), any()) } returns DataState.Success(Unit)
+        coEvery { mockAuthRepository.signInWithEmail(any(), any()) } just Runs
 
         viewModel.navigateToMain.test {
             viewModel.signInWithEmail()
@@ -75,7 +75,7 @@ class LoginViewModelTest {
         val mockUser = mockk<FirebaseUser>()
         every { mockUser.isEmailVerified } returns false
         every { mockAuthRepository.currentUser } returns mockUser
-        coEvery { mockAuthRepository.signInWithEmail(any(), any()) } returns DataState.Success(Unit)
+        coEvery { mockAuthRepository.signInWithEmail(any(), any()) } just Runs
 
         viewModel.navigateToEmailVerification.test {
             viewModel.signInWithEmail()
@@ -86,8 +86,8 @@ class LoginViewModelTest {
 
     @Test
     fun `signInWithEmail sets errorMessage and clears isLoading on failure`() = runTest {
-        coEvery { mockAuthRepository.signInWithEmail(any(), any()) } returns
-            DataState.Error(RuntimeException("Bad credentials"), "Bad credentials")
+        coEvery { mockAuthRepository.signInWithEmail(any(), any()) } throws
+            RuntimeException("Bad credentials")
 
         viewModel.signInWithEmail()
 
@@ -98,7 +98,7 @@ class LoginViewModelTest {
 
     @Test
     fun `signInAnonymously emits navigateToMain on success`() = runTest {
-        coEvery { mockAuthRepository.signInAnonymously() } returns DataState.Success(Unit)
+        coEvery { mockAuthRepository.signInAnonymously() } just Runs
 
         viewModel.navigateToMain.test {
             viewModel.signInAnonymously()
@@ -109,8 +109,7 @@ class LoginViewModelTest {
 
     @Test
     fun `signInAnonymously sets errorMessage and clears isLoading on failure`() = runTest {
-        coEvery { mockAuthRepository.signInAnonymously() } returns
-            DataState.Error(RuntimeException("Failed"), "Failed")
+        coEvery { mockAuthRepository.signInAnonymously() } throws RuntimeException("Failed")
 
         viewModel.signInAnonymously()
 
@@ -121,8 +120,7 @@ class LoginViewModelTest {
 
     @Test
     fun `clearError resets errorMessage`() = runTest {
-        coEvery { mockAuthRepository.signInWithEmail(any(), any()) } returns
-            DataState.Error(RuntimeException("err"), "err")
+        coEvery { mockAuthRepository.signInWithEmail(any(), any()) } throws RuntimeException("err")
         viewModel.signInWithEmail()
 
         viewModel.clearError()

@@ -3,7 +3,6 @@ package idv.wennyli.bloodpressurelog.ui.view.login
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -44,15 +43,12 @@ class EmailVerificationViewModel @Inject constructor(
         if (_uiState.value.resendCooldownSeconds > 0) return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            when (val result = authRepository.sendEmailVerification()) {
-                is DataState.Success -> {
-                    _uiState.update { it.copy(isLoading = false) }
-                    startCooldown()
-                }
-                is DataState.Error -> _uiState.update {
-                    it.copy(isLoading = false, errorMessage = result.message)
-                }
-                is DataState.Loading -> Unit
+            try {
+                authRepository.sendEmailVerification()
+                _uiState.update { it.copy(isLoading = false) }
+                startCooldown()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "") }
             }
         }
     }

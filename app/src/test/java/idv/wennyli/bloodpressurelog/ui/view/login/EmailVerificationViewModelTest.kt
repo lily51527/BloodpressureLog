@@ -3,11 +3,12 @@ package idv.wennyli.bloodpressurelog.ui.view.login
 import app.cash.turbine.test
 import com.google.firebase.auth.FirebaseUser
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
-import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
+import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestCoroutineScheduler
@@ -67,7 +68,7 @@ class EmailVerificationViewModelTest {
     @Test
     fun `resendVerificationEmail succeeds after initial cooldown expires`() =
         runTest(testDispatcher) {
-            coEvery { mockAuthRepository.sendEmailVerification() } returns DataState.Success(Unit)
+            coEvery { mockAuthRepository.sendEmailVerification() } just Runs
 
             advanceTimeBy(EmailVerificationViewModel.RESEND_COOLDOWN_SECONDS * 1_000L + 100)
             viewModel.resendVerificationEmail()
@@ -82,7 +83,7 @@ class EmailVerificationViewModelTest {
     @Test
     fun `resendVerificationEmail cooldown counts down to zero after resend`() =
         runTest(testDispatcher) {
-            coEvery { mockAuthRepository.sendEmailVerification() } returns DataState.Success(Unit)
+            coEvery { mockAuthRepository.sendEmailVerification() } just Runs
 
             advanceTimeBy(EmailVerificationViewModel.RESEND_COOLDOWN_SECONDS * 1_000L + 100)
             viewModel.resendVerificationEmail()
@@ -93,8 +94,8 @@ class EmailVerificationViewModelTest {
 
     @Test
     fun `resendVerificationEmail sets errorMessage on failure`() = runTest(testDispatcher) {
-        coEvery { mockAuthRepository.sendEmailVerification() } returns
-                DataState.Error(RuntimeException("Too many requests"), "Too many requests")
+        coEvery { mockAuthRepository.sendEmailVerification() } throws
+            RuntimeException("Too many requests")
 
         advanceTimeBy(EmailVerificationViewModel.RESEND_COOLDOWN_SECONDS * 1_000L + 100)
         viewModel.resendVerificationEmail()

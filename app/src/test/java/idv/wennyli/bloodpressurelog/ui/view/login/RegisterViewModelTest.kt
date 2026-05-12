@@ -2,9 +2,10 @@ package idv.wennyli.bloodpressurelog.ui.view.login
 
 import app.cash.turbine.test
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
-import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
+import io.mockk.Runs
 import io.mockk.coEvery
+import io.mockk.just
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -76,7 +77,7 @@ class RegisterViewModelTest {
     fun `register emits navigateToEmailVerification on success`() = runTest {
         viewModel.onPasswordChange("secret123")
         viewModel.onConfirmPasswordChange("secret123")
-        coEvery { mockAuthRepository.registerWithEmail(any(), any()) } returns DataState.Success(Unit)
+        coEvery { mockAuthRepository.registerWithEmail(any(), any()) } just Runs
 
         viewModel.navigateToEmailVerification.test {
             viewModel.register("mismatch")
@@ -89,8 +90,8 @@ class RegisterViewModelTest {
     fun `register sets errorMessage and clears isLoading on failure`() = runTest {
         viewModel.onPasswordChange("secret123")
         viewModel.onConfirmPasswordChange("secret123")
-        coEvery { mockAuthRepository.registerWithEmail(any(), any()) } returns
-            DataState.Error(RuntimeException("Email already in use"), "Email already in use")
+        coEvery { mockAuthRepository.registerWithEmail(any(), any()) } throws
+            RuntimeException("Email already in use")
 
         viewModel.register("mismatch")
 

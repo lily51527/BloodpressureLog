@@ -1,9 +1,10 @@
 package idv.wennyli.bloodpressurelog.ui.view.login
 
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
-import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
+import io.mockk.Runs
 import io.mockk.coEvery
+import io.mockk.just
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -41,8 +42,7 @@ class ForgotPasswordViewModelTest {
 
     @Test
     fun `onEmailChange updates email and clears errorMessage`() {
-        coEvery { mockAuthRepository.sendPasswordResetEmail(any()) } returns
-                DataState.Error(RuntimeException("err"), "err")
+        coEvery { mockAuthRepository.sendPasswordResetEmail(any()) } throws RuntimeException("err")
         viewModel.sendResetEmail()
 
         viewModel.onEmailChange("user@example.com")
@@ -53,7 +53,7 @@ class ForgotPasswordViewModelTest {
 
     @Test
     fun `sendResetEmail sets isEmailSent on success`() = runTest {
-        coEvery { mockAuthRepository.sendPasswordResetEmail(any()) } returns DataState.Success(Unit)
+        coEvery { mockAuthRepository.sendPasswordResetEmail(any()) } just Runs
 
         viewModel.sendResetEmail()
 
@@ -63,8 +63,8 @@ class ForgotPasswordViewModelTest {
 
     @Test
     fun `sendResetEmail sets errorMessage and clears isLoading on failure`() = runTest {
-        coEvery { mockAuthRepository.sendPasswordResetEmail(any()) } returns
-                DataState.Error(RuntimeException("User not found"), "User not found")
+        coEvery { mockAuthRepository.sendPasswordResetEmail(any()) } throws
+            RuntimeException("User not found")
 
         viewModel.sendResetEmail()
 

@@ -6,7 +6,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import dagger.hilt.android.qualifiers.ApplicationContext
 import idv.wennyli.bloodpressurelog.R
-import idv.wennyli.bloodpressurelog.data.model.DataState
+import idv.wennyli.bloodpressurelog.data.model.AuthException
 import idv.wennyli.bloodpressurelog.utils.toAuthErrorStringRes
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
 import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class AuthRepositoryImpl @Inject constructor(
     private val auth: FirebaseAuth,
@@ -29,21 +30,25 @@ class AuthRepositoryImpl @Inject constructor(
         awaitClose { auth.removeAuthStateListener(listener) }
     }
 
-    override suspend fun signInWithEmail(email: String, password: String): DataState<Unit> =
-        suspendCancellableCoroutine { continuation ->
+    override suspend fun signInWithEmail(email: String, password: String) =
+        suspendCancellableCoroutine<Unit> { continuation ->
             auth.signInWithEmailAndPassword(email, password)
-                .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
+                .addOnSuccessListener { continuation.resume(Unit) }
                 .addOnFailureListener { e ->
-                    continuation.resume(DataState.Error(e, context.getString(e.toAuthErrorStringRes())))
+                    continuation.resumeWithException(
+                        AuthException(context.getString(e.toAuthErrorStringRes()), e)
+                    )
                 }
         }
 
-    override suspend fun signInAnonymously(): DataState<Unit> =
-        suspendCancellableCoroutine { continuation ->
+    override suspend fun signInAnonymously() =
+        suspendCancellableCoroutine<Unit> { continuation ->
             auth.signInAnonymously()
-                .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
+                .addOnSuccessListener { continuation.resume(Unit) }
                 .addOnFailureListener { e ->
-                    continuation.resume(DataState.Error(e, context.getString(e.toAuthErrorStringRes())))
+                    continuation.resumeWithException(
+                        AuthException(context.getString(e.toAuthErrorStringRes()), e)
+                    )
                 }
         }
 
@@ -51,42 +56,41 @@ class AuthRepositoryImpl @Inject constructor(
         auth.signOut()
     }
 
-    override suspend fun registerWithEmail(email: String, password: String): DataState<Unit> =
-        suspendCancellableCoroutine { continuation ->
+    override suspend fun registerWithEmail(email: String, password: String) =
+        suspendCancellableCoroutine<Unit> { continuation ->
             auth.createUserWithEmailAndPassword(email, password)
                 .addOnSuccessListener {
                     auth.currentUser?.sendEmailVerification()
-                    continuation.resume(DataState.Success(Unit))
+                    continuation.resume(Unit)
                 }
                 .addOnFailureListener { e ->
-                    continuation.resume(DataState.Error(e, context.getString(e.toAuthErrorStringRes())))
+                    continuation.resumeWithException(
+                        AuthException(context.getString(e.toAuthErrorStringRes()), e)
+                    )
                 }
         }
 
-    override suspend fun sendEmailVerification(): DataState<Unit> {
+    override suspend fun sendEmailVerification() {
         val user = auth.currentUser
-            ?: return DataState.Error(
-                IllegalStateException("No user"),
-                context.getString(R.string.error_auth_generic),
-            )
-        return suspendCancellableCoroutine { continuation ->
+            ?: throw AuthException(context.getString(R.string.error_auth_generic))
+        suspendCancellableCoroutine<Unit> { continuation ->
             user.sendEmailVerification()
-                .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
+                .addOnSuccessListener { continuation.resume(Unit) }
                 .addOnFailureListener { e ->
-                    continuation.resume(
-                        DataState.Error(e, context.getString(e.toAuthErrorStringRes()))
+                    continuation.resumeWithException(
+                        AuthException(context.getString(e.toAuthErrorStringRes()), e)
                     )
                 }
         }
     }
 
-    override suspend fun sendPasswordResetEmail(email: String): DataState<Unit> =
-        suspendCancellableCoroutine { continuation ->
+    override suspend fun sendPasswordResetEmail(email: String) =
+        suspendCancellableCoroutine<Unit> { continuation ->
             auth.sendPasswordResetEmail(email)
-                .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
+                .addOnSuccessListener { continuation.resume(Unit) }
                 .addOnFailureListener { e ->
-                    continuation.resume(
-                        DataState.Error(e, context.getString(e.toAuthErrorStringRes()))
+                    continuation.resumeWithException(
+                        AuthException(context.getString(e.toAuthErrorStringRes()), e)
                     )
                 }
         }

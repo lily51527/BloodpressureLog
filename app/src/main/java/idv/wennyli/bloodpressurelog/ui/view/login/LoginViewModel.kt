@@ -3,7 +3,6 @@ package idv.wennyli.bloodpressurelog.ui.view.login
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,23 +47,16 @@ class LoginViewModel @Inject constructor(
         val state = _uiState.value
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            when (val result = authRepository.signInWithEmail(state.email, state.password)) {
-                is DataState.Success -> {
-                    if (authRepository.currentUser?.isEmailVerified == true) {
-                        _navigateToMain.emit(Unit)
-                    } else {
-                        _uiState.update { it.copy(isLoading = false) }
-                        _navigateToEmailVerification.emit(Unit)
-                    }
+            try {
+                authRepository.signInWithEmail(state.email, state.password)
+                if (authRepository.currentUser?.isEmailVerified == true) {
+                    _navigateToMain.emit(Unit)
+                } else {
+                    _uiState.update { it.copy(isLoading = false) }
+                    _navigateToEmailVerification.emit(Unit)
                 }
-                is DataState.Error -> _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = result.message
-                    )
-                }
-
-                is DataState.Loading -> Unit
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "") }
             }
         }
     }
@@ -72,16 +64,11 @@ class LoginViewModel @Inject constructor(
     fun signInAnonymously() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            when (val result = authRepository.signInAnonymously()) {
-                is DataState.Success -> _navigateToMain.emit(Unit)
-                is DataState.Error -> _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = result.message
-                    )
-                }
-
-                is DataState.Loading -> Unit
+            try {
+                authRepository.signInAnonymously()
+                _navigateToMain.emit(Unit)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "") }
             }
         }
     }

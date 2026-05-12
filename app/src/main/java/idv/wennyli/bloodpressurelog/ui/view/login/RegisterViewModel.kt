@@ -3,7 +3,6 @@ package idv.wennyli.bloodpressurelog.ui.view.login
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,10 +53,11 @@ class RegisterViewModel @Inject constructor(
         }
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            when (val result = authRepository.registerWithEmail(state.email, state.password)) {
-                is DataState.Success -> _navigateToEmailVerification.emit(Unit)
-                is DataState.Error -> _uiState.update { it.copy(isLoading = false, errorMessage = result.message) }
-                is DataState.Loading -> Unit
+            try {
+                authRepository.registerWithEmail(state.email, state.password)
+                _navigateToEmailVerification.emit(Unit)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "") }
             }
         }
     }

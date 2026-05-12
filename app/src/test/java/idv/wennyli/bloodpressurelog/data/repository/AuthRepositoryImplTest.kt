@@ -8,7 +8,7 @@ import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import idv.wennyli.bloodpressurelog.R
-import idv.wennyli.bloodpressurelog.data.model.DataState
+import idv.wennyli.bloodpressurelog.data.model.AuthException
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -45,47 +45,44 @@ class AuthRepositoryImplTest {
     }
 
     @Test
-    fun `signInWithEmail returns Success on Firebase success`() = runTest {
+    fun `signInWithEmail completes on Firebase success`() = runTest {
         val task = buildSuccessTask<AuthResult>(null)
         every { mockAuth.signInWithEmailAndPassword(any(), any()) } returns task
 
-        val result = repository.signInWithEmail("test@test.com", "password")
-
-        assertTrue(result is DataState.Success)
+        repository.signInWithEmail("test@test.com", "password")
     }
 
     @Test
-    fun `signInWithEmail returns Error on Firebase failure`() = runTest {
+    fun `signInWithEmail throws AuthException with localized message on Firebase failure`() = runTest {
         val exception = RuntimeException("Invalid credentials")
         val task = buildFailureTask<AuthResult>(exception)
         every { mockAuth.signInWithEmailAndPassword(any(), any()) } returns task
 
-        val result = repository.signInWithEmail("test@test.com", "wrong")
+        val thrown = runCatching { repository.signInWithEmail("test@test.com", "wrong") }
+            .exceptionOrNull()
 
-        assertTrue(result is DataState.Error)
-        assertEquals("操作失敗，請稍後再試", (result as DataState.Error).message)
+        assertTrue(thrown is AuthException)
+        assertEquals("操作失敗，請稍後再試", thrown?.message)
     }
 
     @Test
-    fun `signInAnonymously returns Success on Firebase success`() = runTest {
+    fun `signInAnonymously completes on Firebase success`() = runTest {
         val task = buildSuccessTask<AuthResult>(null)
         every { mockAuth.signInAnonymously() } returns task
 
-        val result = repository.signInAnonymously()
-
-        assertTrue(result is DataState.Success)
+        repository.signInAnonymously()
     }
 
     @Test
-    fun `signInAnonymously returns Error on Firebase failure`() = runTest {
+    fun `signInAnonymously throws AuthException with localized message on Firebase failure`() = runTest {
         val exception = RuntimeException("Anonymous sign in failed")
         val task = buildFailureTask<AuthResult>(exception)
         every { mockAuth.signInAnonymously() } returns task
 
-        val result = repository.signInAnonymously()
+        val thrown = runCatching { repository.signInAnonymously() }.exceptionOrNull()
 
-        assertTrue(result is DataState.Error)
-        assertEquals("操作失敗，請稍後再試", (result as DataState.Error).message)
+        assertTrue(thrown is AuthException)
+        assertEquals("操作失敗，請稍後再試", thrown?.message)
     }
 
     @Test

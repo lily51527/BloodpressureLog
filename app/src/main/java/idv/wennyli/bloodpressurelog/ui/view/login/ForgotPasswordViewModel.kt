@@ -3,7 +3,6 @@ package idv.wennyli.bloodpressurelog.ui.view.login
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,19 +34,11 @@ class ForgotPasswordViewModel @Inject constructor(
         val email = _uiState.value.email
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            when (val result = authRepository.sendPasswordResetEmail(email)) {
-                is DataState.Success -> _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        isEmailSent = true
-                    )
-                }
-
-                is DataState.Error -> _uiState.update {
-                    it.copy(isLoading = false, errorMessage = result.message)
-                }
-
-                is DataState.Loading -> Unit
+            try {
+                authRepository.sendPasswordResetEmail(email)
+                _uiState.update { it.copy(isLoading = false, isEmailSent = true) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "") }
             }
         }
     }
