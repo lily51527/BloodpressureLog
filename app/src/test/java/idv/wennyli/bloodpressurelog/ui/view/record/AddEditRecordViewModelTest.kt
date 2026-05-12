@@ -4,10 +4,11 @@ import app.cash.turbine.test
 import androidx.lifecycle.SavedStateHandle
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
 import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
-import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
+import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.just
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -37,11 +38,6 @@ class AddEditRecordViewModelTest {
         repository = mockRepository,
         savedStateHandle = SavedStateHandle(mapOf("recordId" to recordId)),
     )
-
-    @Before
-    fun setUp() {
-        coEvery { mockRepository.getRecord(any()) } returns DataState.Loading
-    }
 
     // ── Add mode ──
 
@@ -130,7 +126,7 @@ class AddEditRecordViewModelTest {
 
     @Test
     fun `save success in add mode emits savedSuccessfully`() = runTest {
-        coEvery { mockRepository.addRecord(any()) } returns DataState.Success(Unit)
+        coEvery { mockRepository.addRecord(any()) } just Runs
         val viewModel = addModeViewModel()
         viewModel.onSystolicChange("120")
         viewModel.onDiastolicChange("80")
@@ -145,8 +141,7 @@ class AddEditRecordViewModelTest {
 
     @Test
     fun `save error in add mode sets errorMessage`() = runTest {
-        coEvery { mockRepository.addRecord(any()) } returns
-            DataState.Error(RuntimeException("Network error"), "Network error")
+        coEvery { mockRepository.addRecord(any()) } throws RuntimeException("Network error")
         val viewModel = addModeViewModel()
         viewModel.onSystolicChange("120")
         viewModel.onDiastolicChange("80")
@@ -171,7 +166,7 @@ class AddEditRecordViewModelTest {
             recordedAt = 1000L,
             createdAt = 500L,
         )
-        coEvery { mockRepository.getRecord("record-1") } returns DataState.Success(record)
+        coEvery { mockRepository.getRecord("record-1") } returns record
 
         val viewModel = editModeViewModel("record-1")
         val state = viewModel.uiState.value
@@ -188,7 +183,7 @@ class AddEditRecordViewModelTest {
 
     @Test
     fun `edit mode shows error when record is not found`() = runTest {
-        coEvery { mockRepository.getRecord("missing-id") } returns DataState.Success(null)
+        coEvery { mockRepository.getRecord("missing-id") } returns null
 
         val viewModel = editModeViewModel("missing-id")
         val state = viewModel.uiState.value
@@ -199,8 +194,7 @@ class AddEditRecordViewModelTest {
 
     @Test
     fun `edit mode shows error when getRecord fails`() = runTest {
-        coEvery { mockRepository.getRecord("record-1") } returns
-            DataState.Error(RuntimeException("Network error"), "Network error")
+        coEvery { mockRepository.getRecord("record-1") } throws RuntimeException("Network error")
 
         val viewModel = editModeViewModel("record-1")
         val state = viewModel.uiState.value
@@ -220,8 +214,8 @@ class AddEditRecordViewModelTest {
             recordedAt = 1000L,
             createdAt = 500L,
         )
-        coEvery { mockRepository.getRecord("record-1") } returns DataState.Success(record)
-        coEvery { mockRepository.updateRecord(any()) } returns DataState.Success(Unit)
+        coEvery { mockRepository.getRecord("record-1") } returns record
+        coEvery { mockRepository.updateRecord(any()) } just Runs
 
         val viewModel = editModeViewModel("record-1")
         viewModel.save()
@@ -243,8 +237,8 @@ class AddEditRecordViewModelTest {
             note = "",
             recordedAt = 1000L,
         )
-        coEvery { mockRepository.getRecord("record-1") } returns DataState.Success(record)
-        coEvery { mockRepository.updateRecord(any()) } returns DataState.Success(Unit)
+        coEvery { mockRepository.getRecord("record-1") } returns record
+        coEvery { mockRepository.updateRecord(any()) } just Runs
 
         val viewModel = editModeViewModel("record-1")
 

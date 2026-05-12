@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
-import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,29 +51,25 @@ class AddEditRecordViewModel @Inject constructor(
     private fun loadRecord(id: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            when (val result = repository.getRecord(id)) {
-                is DataState.Success -> {
-                    val record = result.data
-                    if (record != null) {
-                        _uiState.update {
-                            it.copy(
-                                systolic = record.systolic.toString(),
-                                diastolic = record.diastolic.toString(),
-                                pulse = record.pulse.toString(),
-                                note = record.note,
-                                recordedAt = record.recordedAt,
-                                originalCreatedAt = record.createdAt,
-                                isLoading = false,
-                            )
-                        }
-                    } else {
-                        _uiState.update { it.copy(isLoading = false, errorMessage = "找不到紀錄") }
+            try {
+                val record = repository.getRecord(id)
+                if (record != null) {
+                    _uiState.update {
+                        it.copy(
+                            systolic = record.systolic.toString(),
+                            diastolic = record.diastolic.toString(),
+                            pulse = record.pulse.toString(),
+                            note = record.note,
+                            recordedAt = record.recordedAt,
+                            originalCreatedAt = record.createdAt,
+                            isLoading = false,
+                        )
                     }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, errorMessage = "找不到紀錄") }
                 }
-                is DataState.Error -> {
-                    _uiState.update { it.copy(isLoading = false, errorMessage = result.message) }
-                }
-                DataState.Loading -> {}
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "載入失敗") }
             }
         }
     }
@@ -114,40 +109,35 @@ class AddEditRecordViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val result = if (recordId != null) {
-                repository.updateRecord(
-                    BloodPressureRecord(
-                        id = recordId,
-                        systolic = systolic,
-                        diastolic = diastolic,
-                        pulse = pulse,
-                        note = state.note,
-                        recordedAt = state.recordedAt,
-                        createdAt = state.originalCreatedAt,
-                        updatedAt = System.currentTimeMillis(),
-                    ),
-                )
-            } else {
-                repository.addRecord(
-                    BloodPressureRecord(
-                        systolic = systolic,
-                        diastolic = diastolic,
-                        pulse = pulse,
-                        note = state.note,
-                        recordedAt = state.recordedAt,
-                    ),
-                )
-            }
-
-            when (result) {
-                is DataState.Success -> {
-                    _uiState.update { it.copy(isLoading = false) }
-                    _savedSuccessfully.emit(Unit)
+            try {
+                if (recordId != null) {
+                    repository.updateRecord(
+                        BloodPressureRecord(
+                            id = recordId,
+                            systolic = systolic,
+                            diastolic = diastolic,
+                            pulse = pulse,
+                            note = state.note,
+                            recordedAt = state.recordedAt,
+                            createdAt = state.originalCreatedAt,
+                            updatedAt = System.currentTimeMillis(),
+                        ),
+                    )
+                } else {
+                    repository.addRecord(
+                        BloodPressureRecord(
+                            systolic = systolic,
+                            diastolic = diastolic,
+                            pulse = pulse,
+                            note = state.note,
+                            recordedAt = state.recordedAt,
+                        ),
+                    )
                 }
-                is DataState.Error -> {
-                    _uiState.update { it.copy(isLoading = false, errorMessage = result.message) }
-                }
-                DataState.Loading -> {}
+                _uiState.update { it.copy(isLoading = false) }
+                _savedSuccessfully.emit(Unit)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "儲存失敗") }
             }
         }
     }

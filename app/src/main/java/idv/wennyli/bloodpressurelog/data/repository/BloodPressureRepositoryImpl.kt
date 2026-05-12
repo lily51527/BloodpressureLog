@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
 import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class BloodPressureRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore,
@@ -52,68 +53,56 @@ class BloodPressureRepositoryImpl @Inject constructor(
         awaitClose { subscription.remove() }
     }
 
-    override suspend fun getRecord(id: String): DataState<BloodPressureRecord?> {
+    override suspend fun getRecord(id: String): BloodPressureRecord? {
         val collection = recordsCollection()
-            ?: return DataState.Error(
-                IllegalStateException("User not authenticated"),
-                NOT_AUTHENTICATED_MSG
-            )
+            ?: throw IllegalStateException(NOT_AUTHENTICATED_MSG)
         return suspendCancellableCoroutine { continuation ->
             collection.document(id)
                 .get()
                 .addOnSuccessListener { document ->
-                    continuation.resume(DataState.Success(document.toBloodPressureRecord()))
+                    continuation.resume(document.toBloodPressureRecord())
                 }
                 .addOnFailureListener { e ->
-                    continuation.resume(DataState.Error(e, e.message ?: "Failed to get record"))
+                    continuation.resumeWithException(e)
                 }
         }
     }
 
-    override suspend fun addRecord(record: BloodPressureRecord): DataState<Unit> {
+    override suspend fun addRecord(record: BloodPressureRecord) {
         val collection = recordsCollection()
-            ?: return DataState.Error(
-                IllegalStateException("User not authenticated"),
-                NOT_AUTHENTICATED_MSG
-            )
+            ?: throw IllegalStateException(NOT_AUTHENTICATED_MSG)
         val now = System.currentTimeMillis()
-        return suspendCancellableCoroutine { continuation ->
+        suspendCancellableCoroutine<Unit> { continuation ->
             collection.add(record.toAddMap(createdAt = now, updatedAt = now))
-                .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
+                .addOnSuccessListener { continuation.resume(Unit) }
                 .addOnFailureListener { e ->
-                    continuation.resume(DataState.Error(e, e.message ?: "Failed to add record"))
+                    continuation.resumeWithException(e)
                 }
         }
     }
 
-    override suspend fun updateRecord(record: BloodPressureRecord): DataState<Unit> {
+    override suspend fun updateRecord(record: BloodPressureRecord) {
         val collection = recordsCollection()
-            ?: return DataState.Error(
-                IllegalStateException("User not authenticated"),
-                NOT_AUTHENTICATED_MSG
-            )
-        return suspendCancellableCoroutine { continuation ->
+            ?: throw IllegalStateException(NOT_AUTHENTICATED_MSG)
+        suspendCancellableCoroutine<Unit> { continuation ->
             collection.document(record.id)
                 .set(record.toUpdateMap(updatedAt = System.currentTimeMillis()), SetOptions.merge())
-                .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
+                .addOnSuccessListener { continuation.resume(Unit) }
                 .addOnFailureListener { e ->
-                    continuation.resume(DataState.Error(e, e.message ?: "Failed to update record"))
+                    continuation.resumeWithException(e)
                 }
         }
     }
 
-    override suspend fun deleteRecord(id: String): DataState<Unit> {
+    override suspend fun deleteRecord(id: String) {
         val collection = recordsCollection()
-            ?: return DataState.Error(
-                IllegalStateException("User not authenticated"),
-                NOT_AUTHENTICATED_MSG
-            )
-        return suspendCancellableCoroutine { continuation ->
+            ?: throw IllegalStateException(NOT_AUTHENTICATED_MSG)
+        suspendCancellableCoroutine<Unit> { continuation ->
             collection.document(id)
                 .delete()
-                .addOnSuccessListener { continuation.resume(DataState.Success(Unit)) }
+                .addOnSuccessListener { continuation.resume(Unit) }
                 .addOnFailureListener { e ->
-                    continuation.resume(DataState.Error(e, e.message ?: "Failed to delete record"))
+                    continuation.resumeWithException(e)
                 }
         }
     }

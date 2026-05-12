@@ -74,8 +74,9 @@ class RecordListViewModel @Inject constructor(
 
     fun deleteRecord(id: String, onDeleteFailed: String) {
         viewModelScope.launch {
-            val result = repository.deleteRecord(id)
-            if (result is DataState.Error) {
+            try {
+                repository.deleteRecord(id)
+            } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = onDeleteFailed) }
             }
         }

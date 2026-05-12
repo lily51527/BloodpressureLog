@@ -155,22 +155,20 @@ class BloodPressureRepositoryImplTest {
     // region getRecord
 
     @Test
-    fun `getRecord returns Success with record when document exists`() = runTest {
+    fun `getRecord returns record when document exists`() = runTest {
         val mockDoc = buildMockDocument("doc-1")
         val task = buildSuccessTask<DocumentSnapshot>(mockDoc)
         every { mockDocumentRef.get() } returns task
 
         val result = repository.getRecord("doc-1")
 
-        assertTrue(result is DataState.Success)
-        val record = (result as DataState.Success<*>).data as BloodPressureRecord?
-        assertEquals("doc-1", record?.id)
-        assertEquals(120, record?.systolic)
-        assertEquals(80, record?.diastolic)
+        assertEquals("doc-1", result?.id)
+        assertEquals(120, result?.systolic)
+        assertEquals(80, result?.diastolic)
     }
 
     @Test
-    fun `getRecord returns Success with null when document cannot be mapped`() = runTest {
+    fun `getRecord returns null when document cannot be mapped`() = runTest {
         val invalidDoc = mockk<DocumentSnapshot>()
         every { invalidDoc.id } returns "invalid"
         every { invalidDoc.getLong("systolic") } returns null
@@ -179,20 +177,17 @@ class BloodPressureRepositoryImplTest {
 
         val result = repository.getRecord("invalid")
 
-        assertTrue(result is DataState.Success)
-        assertNull((result as DataState.Success<*>).data)
+        assertNull(result)
     }
 
     @Test
-    fun `getRecord returns Error on Firestore failure`() = runTest {
+    fun `getRecord throws on Firestore failure`() = runTest {
         val exception = RuntimeException("get failed")
         val task = buildFailureTask<DocumentSnapshot>(exception)
         every { mockDocumentRef.get() } returns task
 
-        val result = repository.getRecord("doc-1")
-
-        assertTrue(result is DataState.Error)
-        assertEquals("get failed", (result as DataState.Error).message)
+        val thrown = runCatching { repository.getRecord("doc-1") }.exceptionOrNull()
+        assertEquals("get failed", thrown?.message)
     }
 
     // endregion
@@ -200,25 +195,21 @@ class BloodPressureRepositoryImplTest {
     // region addRecord
 
     @Test
-    fun `addRecord returns Success on Firestore success`() = runTest {
+    fun `addRecord completes on Firestore success`() = runTest {
         val task = buildSuccessTask<DocumentReference>(mockDocumentRef)
         every { mockCollection.add(any()) } returns task
 
-        val result = repository.addRecord(sampleRecord())
-
-        assertTrue(result is DataState.Success)
+        repository.addRecord(sampleRecord())
     }
 
     @Test
-    fun `addRecord returns Error on Firestore failure`() = runTest {
+    fun `addRecord throws on Firestore failure`() = runTest {
         val exception = RuntimeException("add failed")
         val task = buildFailureTask<DocumentReference>(exception)
         every { mockCollection.add(any()) } returns task
 
-        val result = repository.addRecord(sampleRecord())
-
-        assertTrue(result is DataState.Error)
-        assertEquals("add failed", (result as DataState.Error).message)
+        val thrown = runCatching { repository.addRecord(sampleRecord()) }.exceptionOrNull()
+        assertEquals("add failed", thrown?.message)
     }
 
     // endregion
@@ -226,25 +217,21 @@ class BloodPressureRepositoryImplTest {
     // region updateRecord
 
     @Test
-    fun `updateRecord returns Success on Firestore success`() = runTest {
+    fun `updateRecord completes on Firestore success`() = runTest {
         val task = buildSuccessTask<Void>(null)
         every { mockDocumentRef.set(any(), any()) } returns task
 
-        val result = repository.updateRecord(sampleRecord(id = "doc-1"))
-
-        assertTrue(result is DataState.Success)
+        repository.updateRecord(sampleRecord(id = "doc-1"))
     }
 
     @Test
-    fun `updateRecord returns Error on Firestore failure`() = runTest {
+    fun `updateRecord throws on Firestore failure`() = runTest {
         val exception = RuntimeException("update failed")
         val task = buildFailureTask<Void>(exception)
         every { mockDocumentRef.set(any(), any()) } returns task
 
-        val result = repository.updateRecord(sampleRecord(id = "doc-1"))
-
-        assertTrue(result is DataState.Error)
-        assertEquals("update failed", (result as DataState.Error).message)
+        val thrown = runCatching { repository.updateRecord(sampleRecord(id = "doc-1")) }.exceptionOrNull()
+        assertEquals("update failed", thrown?.message)
     }
 
     // endregion
@@ -263,43 +250,35 @@ class BloodPressureRepositoryImplTest {
     }
 
     @Test
-    fun `getRecord returns Error when user is null`() = runTest {
+    fun `getRecord throws when user is null`() = runTest {
         every { mockAuth.currentUser } returns null
 
-        val result = repository.getRecord("doc-1")
-
-        assertTrue(result is DataState.Error)
-        assertEquals("請重新登入", (result as DataState.Error).message)
+        val thrown = runCatching { repository.getRecord("doc-1") }.exceptionOrNull()
+        assertEquals("請重新登入", thrown?.message)
     }
 
     @Test
-    fun `addRecord returns Error when user is null`() = runTest {
+    fun `addRecord throws when user is null`() = runTest {
         every { mockAuth.currentUser } returns null
 
-        val result = repository.addRecord(sampleRecord())
-
-        assertTrue(result is DataState.Error)
-        assertEquals("請重新登入", (result as DataState.Error).message)
+        val thrown = runCatching { repository.addRecord(sampleRecord()) }.exceptionOrNull()
+        assertEquals("請重新登入", thrown?.message)
     }
 
     @Test
-    fun `updateRecord returns Error when user is null`() = runTest {
+    fun `updateRecord throws when user is null`() = runTest {
         every { mockAuth.currentUser } returns null
 
-        val result = repository.updateRecord(sampleRecord(id = "doc-1"))
-
-        assertTrue(result is DataState.Error)
-        assertEquals("請重新登入", (result as DataState.Error).message)
+        val thrown = runCatching { repository.updateRecord(sampleRecord(id = "doc-1")) }.exceptionOrNull()
+        assertEquals("請重新登入", thrown?.message)
     }
 
     @Test
-    fun `deleteRecord returns Error when user is null`() = runTest {
+    fun `deleteRecord throws when user is null`() = runTest {
         every { mockAuth.currentUser } returns null
 
-        val result = repository.deleteRecord("doc-1")
-
-        assertTrue(result is DataState.Error)
-        assertEquals("請重新登入", (result as DataState.Error).message)
+        val thrown = runCatching { repository.deleteRecord("doc-1") }.exceptionOrNull()
+        assertEquals("請重新登入", thrown?.message)
     }
 
     // endregion
@@ -307,25 +286,21 @@ class BloodPressureRepositoryImplTest {
     // region deleteRecord
 
     @Test
-    fun `deleteRecord returns Success on Firestore success`() = runTest {
+    fun `deleteRecord completes on Firestore success`() = runTest {
         val task = buildSuccessTask<Void>(null)
         every { mockDocumentRef.delete() } returns task
 
-        val result = repository.deleteRecord("doc-1")
-
-        assertTrue(result is DataState.Success)
+        repository.deleteRecord("doc-1")
     }
 
     @Test
-    fun `deleteRecord returns Error on Firestore failure`() = runTest {
+    fun `deleteRecord throws on Firestore failure`() = runTest {
         val exception = RuntimeException("delete failed")
         val task = buildFailureTask<Void>(exception)
         every { mockDocumentRef.delete() } returns task
 
-        val result = repository.deleteRecord("doc-1")
-
-        assertTrue(result is DataState.Error)
-        assertEquals("delete failed", (result as DataState.Error).message)
+        val thrown = runCatching { repository.deleteRecord("doc-1") }.exceptionOrNull()
+        assertEquals("delete failed", thrown?.message)
     }
 
     // endregion
