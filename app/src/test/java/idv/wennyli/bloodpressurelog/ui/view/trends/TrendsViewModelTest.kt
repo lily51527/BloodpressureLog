@@ -1,5 +1,12 @@
 package idv.wennyli.bloodpressurelog.ui.view.trends
 
+import app.cash.turbine.test
+import assertk.assertThat
+import assertk.assertions.hasSize
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
 import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.data.model.DataState
@@ -7,17 +14,13 @@ import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
 import idv.wennyli.bloodpressurelog.domain.usecase.BuildChartDataUseCase
 import io.mockk.every
 import io.mockk.mockk
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Rule
-import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -42,7 +45,7 @@ class TrendsViewModelTest {
             recordedAt = epochMillis(date),
         )
 
-    @Before
+    @BeforeTest
     fun setUp() {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Loading)
     }
@@ -53,7 +56,7 @@ class TrendsViewModelTest {
     @Test
     fun `initial state is loading`() {
         val viewModel = createViewModel()
-        assertTrue(viewModel.uiState.value.isLoading)
+        assertThat(viewModel.uiState.value.isLoading).isTrue()
     }
 
     /** UseCase 回傳空圖表資料點時，[TrendsUiState.isEmpty] 應為 true，且無 loading 與 errorMessage。 */
@@ -65,9 +68,9 @@ class TrendsViewModelTest {
         val viewModel = createViewModel()
 
         val state = viewModel.uiState.value
-        assertFalse(state.isLoading)
-        assertTrue(state.isEmpty)
-        assertNull(state.errorMessage)
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.isEmpty).isTrue()
+        assertThat(state.errorMessage).isNull()
     }
 
     /** Repository 回傳 [DataState.Error] 時，[TrendsUiState.errorMessage] 應等於 error 中的 message。 */
@@ -79,8 +82,8 @@ class TrendsViewModelTest {
         val viewModel = createViewModel()
 
         val state = viewModel.uiState.value
-        assertFalse(state.isLoading)
-        assertEquals("載入失敗", state.errorMessage)
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.errorMessage).isEqualTo("載入失敗")
     }
 
     /**
@@ -101,8 +104,8 @@ class TrendsViewModelTest {
         val viewModel = createViewModel()
 
         val state = viewModel.uiState.value
-        assertFalse(state.isEmpty)
-        assertEquals(2, state.chartPoints.size)
+        assertThat(state.isEmpty).isFalse()
+        assertThat(state.chartPoints).hasSize(2)
     }
 
     /**
@@ -124,8 +127,8 @@ class TrendsViewModelTest {
         viewModel.onRangeChange(TrendRange.DAYS_14)
 
         val state = viewModel.uiState.value
-        assertEquals(TrendRange.DAYS_14, state.selectedRange)
-        assertEquals(14, state.xLabels.size)
+        assertThat(state.selectedRange).isEqualTo(TrendRange.DAYS_14)
+        assertThat(state.xLabels).hasSize(14)
     }
 
     /**
@@ -147,7 +150,7 @@ class TrendsViewModelTest {
         viewModel.onMetricChange(TrendMetric.DIASTOLIC)
 
         val state = viewModel.uiState.value
-        assertEquals(TrendMetric.DIASTOLIC, state.selectedMetric)
-        assertEquals(80f, state.chartPoints[0].second)
+        assertThat(state.selectedMetric).isEqualTo(TrendMetric.DIASTOLIC)
+        assertThat(state.chartPoints[0].second).isEqualTo(80f)
     }
 }

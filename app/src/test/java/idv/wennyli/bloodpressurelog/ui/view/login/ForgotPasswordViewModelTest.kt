@@ -1,21 +1,22 @@
 package idv.wennyli.bloodpressurelog.ui.view.login
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.just
 import io.mockk.mockk
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Rule
-import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ForgotPasswordViewModelTest {
@@ -26,7 +27,7 @@ class ForgotPasswordViewModelTest {
     private val mockAuthRepository = mockk<AuthRepository>()
     private lateinit var viewModel: ForgotPasswordViewModel
 
-    @Before
+    @BeforeTest
     fun setUp() {
         viewModel = ForgotPasswordViewModel(mockAuthRepository)
     }
@@ -34,10 +35,10 @@ class ForgotPasswordViewModelTest {
     @Test
     fun `initial state is empty and not loading`() {
         val state = viewModel.uiState.value
-        assertEquals("", state.email)
-        assertFalse(state.isLoading)
-        assertNull(state.errorMessage)
-        assertFalse(state.isEmailSent)
+        assertThat(state.email).isEqualTo("")
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.errorMessage).isNull()
+        assertThat(state.isEmailSent).isFalse()
     }
 
     @Test
@@ -47,8 +48,8 @@ class ForgotPasswordViewModelTest {
 
         viewModel.onEmailChange("user@example.com")
 
-        assertEquals("user@example.com", viewModel.uiState.value.email)
-        assertNull(viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.email).isEqualTo("user@example.com")
+        assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
     @Test
@@ -57,8 +58,8 @@ class ForgotPasswordViewModelTest {
 
         viewModel.sendResetEmail()
 
-        assertFalse(viewModel.uiState.value.isLoading)
-        assertTrue(viewModel.uiState.value.isEmailSent)
+        assertThat(viewModel.uiState.value.isLoading).isFalse()
+        assertThat(viewModel.uiState.value.isEmailSent).isTrue()
     }
 
     @Test
@@ -68,8 +69,8 @@ class ForgotPasswordViewModelTest {
 
         viewModel.sendResetEmail()
 
-        assertFalse(viewModel.uiState.value.isLoading)
-        assertFalse(viewModel.uiState.value.isEmailSent)
-        assertEquals("User not found", viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.isLoading).isFalse()
+        assertThat(viewModel.uiState.value.isEmailSent).isFalse()
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("User not found")
     }
 }

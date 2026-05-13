@@ -2,6 +2,11 @@ package idv.wennyli.bloodpressurelog.ui.view.record
 
 import app.cash.turbine.test
 import androidx.lifecycle.SavedStateHandle
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
 import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
@@ -13,16 +18,12 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Rule
-import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AddEditRecordViewModelTest {
@@ -33,7 +34,7 @@ class AddEditRecordViewModelTest {
     private val mockRepository = mockk<BloodPressureRepository>()
     private val mockResourceProvider = mockk<ResourceProvider>()
 
-    @Before
+    @BeforeTest
     fun setUp() {
         every { mockResourceProvider.getString(R.string.error_record_invalid_input) } returns "請輸入有效的正整數數值"
         every { mockResourceProvider.getString(R.string.error_record_not_found) } returns "找不到紀錄"
@@ -58,49 +59,49 @@ class AddEditRecordViewModelTest {
         val viewModel = addModeViewModel()
         val state = viewModel.uiState.value
 
-        assertEquals("", state.systolic)
-        assertEquals("", state.diastolic)
-        assertEquals("", state.pulse)
-        assertEquals("", state.note)
-        assertFalse(state.isEditMode)
-        assertFalse(state.isLoading)
-        assertNull(state.errorMessage)
+        assertThat(state.systolic).isEqualTo("")
+        assertThat(state.diastolic).isEqualTo("")
+        assertThat(state.pulse).isEqualTo("")
+        assertThat(state.note).isEqualTo("")
+        assertThat(state.isEditMode).isFalse()
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.errorMessage).isNull()
     }
 
     @Test
     fun `onSystolicChange updates systolic and clears errorMessage`() {
         val viewModel = addModeViewModel()
         viewModel.onSystolicChange("120")
-        assertEquals("120", viewModel.uiState.value.systolic)
-        assertNull(viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.systolic).isEqualTo("120")
+        assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
     @Test
     fun `onDiastolicChange updates diastolic`() {
         val viewModel = addModeViewModel()
         viewModel.onDiastolicChange("80")
-        assertEquals("80", viewModel.uiState.value.diastolic)
+        assertThat(viewModel.uiState.value.diastolic).isEqualTo("80")
     }
 
     @Test
     fun `onPulseChange updates pulse`() {
         val viewModel = addModeViewModel()
         viewModel.onPulseChange("72")
-        assertEquals("72", viewModel.uiState.value.pulse)
+        assertThat(viewModel.uiState.value.pulse).isEqualTo("72")
     }
 
     @Test
     fun `onNoteChange updates note`() {
         val viewModel = addModeViewModel()
         viewModel.onNoteChange("運動後")
-        assertEquals("運動後", viewModel.uiState.value.note)
+        assertThat(viewModel.uiState.value.note).isEqualTo("運動後")
     }
 
     @Test
     fun `onRecordedAtChange updates recordedAt`() {
         val viewModel = addModeViewModel()
         viewModel.onRecordedAtChange(123456789L)
-        assertEquals(123456789L, viewModel.uiState.value.recordedAt)
+        assertThat(viewModel.uiState.value.recordedAt).isEqualTo(123456789L)
     }
 
     @Test
@@ -112,7 +113,7 @@ class AddEditRecordViewModelTest {
 
         viewModel.save()
 
-        assertEquals("請輸入有效的正整數數值", viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("請輸入有效的正整數數值")
     }
 
     @Test
@@ -124,7 +125,7 @@ class AddEditRecordViewModelTest {
 
         viewModel.save()
 
-        assertEquals("請輸入有效的正整數數值", viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("請輸入有效的正整數數值")
     }
 
     @Test
@@ -133,7 +134,7 @@ class AddEditRecordViewModelTest {
 
         viewModel.save()
 
-        assertEquals("請輸入有效的正整數數值", viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("請輸入有效的正整數數值")
     }
 
     @Test
@@ -161,8 +162,8 @@ class AddEditRecordViewModelTest {
 
         viewModel.save()
 
-        assertEquals("Network error", viewModel.uiState.value.errorMessage)
-        assertFalse(viewModel.uiState.value.isLoading)
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("Network error")
+        assertThat(viewModel.uiState.value.isLoading).isFalse()
     }
 
     // ── Edit mode ──
@@ -183,14 +184,14 @@ class AddEditRecordViewModelTest {
         val viewModel = editModeViewModel("record-1")
         val state = viewModel.uiState.value
 
-        assertEquals("130", state.systolic)
-        assertEquals("85", state.diastolic)
-        assertEquals("75", state.pulse)
-        assertEquals("after exercise", state.note)
-        assertEquals(1000L, state.recordedAt)
-        assertEquals(500L, state.originalCreatedAt)
-        assertTrue(state.isEditMode)
-        assertFalse(state.isLoading)
+        assertThat(state.systolic).isEqualTo("130")
+        assertThat(state.diastolic).isEqualTo("85")
+        assertThat(state.pulse).isEqualTo("75")
+        assertThat(state.note).isEqualTo("after exercise")
+        assertThat(state.recordedAt).isEqualTo(1000L)
+        assertThat(state.originalCreatedAt).isEqualTo(500L)
+        assertThat(state.isEditMode).isTrue()
+        assertThat(state.isLoading).isFalse()
     }
 
     @Test
@@ -200,8 +201,8 @@ class AddEditRecordViewModelTest {
         val viewModel = editModeViewModel("missing-id")
         val state = viewModel.uiState.value
 
-        assertEquals("找不到紀錄", state.errorMessage)
-        assertFalse(state.isLoading)
+        assertThat(state.errorMessage).isEqualTo("找不到紀錄")
+        assertThat(state.isLoading).isFalse()
     }
 
     @Test
@@ -211,8 +212,8 @@ class AddEditRecordViewModelTest {
         val viewModel = editModeViewModel("record-1")
         val state = viewModel.uiState.value
 
-        assertEquals("Network error", state.errorMessage)
-        assertFalse(state.isLoading)
+        assertThat(state.errorMessage).isEqualTo("Network error")
+        assertThat(state.isLoading).isFalse()
     }
 
     @Test

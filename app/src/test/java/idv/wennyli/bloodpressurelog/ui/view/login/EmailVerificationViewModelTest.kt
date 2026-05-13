@@ -1,6 +1,10 @@
 package idv.wennyli.bloodpressurelog.ui.view.login
 
 import app.cash.turbine.test
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
 import com.google.firebase.auth.FirebaseUser
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
@@ -10,17 +14,14 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Before
 import org.junit.Rule
-import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class EmailVerificationViewModelTest {
@@ -34,7 +35,7 @@ class EmailVerificationViewModelTest {
     private val mockAuthRepository = mockk<AuthRepository>()
     private lateinit var viewModel: EmailVerificationViewModel
 
-    @Before
+    @BeforeTest
     fun setUp() {
         every { mockAuthRepository.currentUser } returns null
         viewModel = EmailVerificationViewModel(mockAuthRepository)
@@ -42,12 +43,11 @@ class EmailVerificationViewModelTest {
 
     @Test
     fun `initial state starts with cooldown active`() {
-        assertEquals(
-            EmailVerificationViewModel.RESEND_COOLDOWN_SECONDS,
-            viewModel.uiState.value.resendCooldownSeconds
+        assertThat(viewModel.uiState.value.resendCooldownSeconds).isEqualTo(
+            EmailVerificationViewModel.RESEND_COOLDOWN_SECONDS
         )
-        assertFalse(viewModel.uiState.value.isLoading)
-        assertNull(viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.isLoading).isFalse()
+        assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
     @Test
@@ -56,7 +56,7 @@ class EmailVerificationViewModelTest {
         every { mockUser.email } returns "user@example.com"
         every { mockAuthRepository.currentUser } returns mockUser
         val vm = EmailVerificationViewModel(mockAuthRepository)
-        assertEquals("user@example.com", vm.uiState.value.email)
+        assertThat(vm.uiState.value.email).isEqualTo("user@example.com")
     }
 
     @Test
@@ -73,10 +73,9 @@ class EmailVerificationViewModelTest {
             advanceTimeBy(EmailVerificationViewModel.RESEND_COOLDOWN_SECONDS * 1_000L + 100)
             viewModel.resendVerificationEmail()
 
-            assertFalse(viewModel.uiState.value.isLoading)
-            assertEquals(
-                EmailVerificationViewModel.RESEND_COOLDOWN_SECONDS,
-                viewModel.uiState.value.resendCooldownSeconds,
+            assertThat(viewModel.uiState.value.isLoading).isFalse()
+            assertThat(viewModel.uiState.value.resendCooldownSeconds).isEqualTo(
+                EmailVerificationViewModel.RESEND_COOLDOWN_SECONDS
             )
         }
 
@@ -89,7 +88,7 @@ class EmailVerificationViewModelTest {
             viewModel.resendVerificationEmail()
             advanceTimeBy(EmailVerificationViewModel.RESEND_COOLDOWN_SECONDS * 1_000L + 100)
 
-            assertEquals(0, viewModel.uiState.value.resendCooldownSeconds)
+            assertThat(viewModel.uiState.value.resendCooldownSeconds).isEqualTo(0)
         }
 
     @Test
@@ -100,8 +99,8 @@ class EmailVerificationViewModelTest {
         advanceTimeBy(EmailVerificationViewModel.RESEND_COOLDOWN_SECONDS * 1_000L + 100)
         viewModel.resendVerificationEmail()
 
-        assertFalse(viewModel.uiState.value.isLoading)
-        assertEquals("Too many requests", viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.isLoading).isFalse()
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("Too many requests")
     }
 
     @Test

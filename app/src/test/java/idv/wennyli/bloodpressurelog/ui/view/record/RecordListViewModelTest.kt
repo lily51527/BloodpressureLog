@@ -1,6 +1,13 @@
 package idv.wennyli.bloodpressurelog.ui.view.record
 
 import app.cash.turbine.test
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
 import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
@@ -14,17 +21,13 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Rule
-import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RecordListViewModelTest {
@@ -43,7 +46,7 @@ class RecordListViewModelTest {
         BloodPressureRecord(id = "3", systolic = 110, diastolic = 70, pulse = 65, recordedAt = 2000L),
     )
 
-    @Before
+    @BeforeTest
     fun setUp() {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Loading)
         every { mockResourceProvider.getString(R.string.error_delete_record_failed) } returns "刪除失敗，請稍後再試"
@@ -53,9 +56,9 @@ class RecordListViewModelTest {
     @Test
     fun `initial state has isLoading true and empty records`() {
         val state = viewModel.uiState.value
-        assertTrue(state.isLoading)
-        assertTrue(state.records.isEmpty())
-        assertNull(state.errorMessage)
+        assertThat(state.isLoading).isTrue()
+        assertThat(state.records).isEmpty()
+        assertThat(state.errorMessage).isNull()
     }
 
     @Test
@@ -65,9 +68,9 @@ class RecordListViewModelTest {
         viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
 
         val state = viewModel.uiState.value
-        assertFalse(state.isLoading)
-        assertNull(state.errorMessage)
-        assertEquals(listOf("1", "3", "2"), state.records.map { it.id })
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.errorMessage).isNull()
+        assertThat(state.records.map { it.id }).containsExactly("1", "3", "2")
     }
 
     @Test
@@ -78,8 +81,8 @@ class RecordListViewModelTest {
         viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
 
         val state = viewModel.uiState.value
-        assertFalse(state.isLoading)
-        assertEquals("Firestore error", state.errorMessage)
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.errorMessage).isEqualTo("Firestore error")
     }
 
     @Test
@@ -88,14 +91,14 @@ class RecordListViewModelTest {
 
         viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
 
-        assertTrue(viewModel.uiState.value.isLoading)
+        assertThat(viewModel.uiState.value.isLoading).isTrue()
     }
 
     @Test
     fun `onAddRecord emits null to navigateToAddEdit`() = runTest {
         viewModel.navigateToAddEdit.test {
             viewModel.onAddRecord()
-            assertNull(awaitItem())
+            assertThat(awaitItem()).isNull()
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -104,7 +107,7 @@ class RecordListViewModelTest {
     fun `onEditRecord emits recordId to navigateToAddEdit`() = runTest {
         viewModel.navigateToAddEdit.test {
             viewModel.onEditRecord("record-123")
-            assertEquals("record-123", awaitItem())
+            assertThat(awaitItem()).isEqualTo("record-123")
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -124,7 +127,7 @@ class RecordListViewModelTest {
 
         viewModel.deleteRecord("record-456")
 
-        assertEquals("刪除失敗，請稍後再試", viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("刪除失敗，請稍後再試")
     }
 
     @Test
@@ -135,7 +138,7 @@ class RecordListViewModelTest {
 
         viewModel.deleteRecord("record-456")
 
-        assertNull(viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
     @Test
@@ -154,8 +157,8 @@ class RecordListViewModelTest {
         viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
 
         val state = viewModel.uiState.value
-        assertFalse(state.isLoading)
-        assertTrue(state.records.isEmpty())
-        assertNull(state.errorMessage)
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.records).isEmpty()
+        assertThat(state.errorMessage).isNull()
     }
 }

@@ -1,21 +1,22 @@
 package idv.wennyli.bloodpressurelog.ui.view.login
 
 import app.cash.turbine.test
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.just
 import io.mockk.mockk
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Before
 import org.junit.Rule
-import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RegisterViewModelTest {
@@ -26,7 +27,7 @@ class RegisterViewModelTest {
     private val mockAuthRepository = mockk<AuthRepository>()
     private lateinit var viewModel: RegisterViewModel
 
-    @Before
+    @BeforeTest
     fun setUp() {
         viewModel = RegisterViewModel(mockAuthRepository)
     }
@@ -34,32 +35,32 @@ class RegisterViewModelTest {
     @Test
     fun `initial state is empty and not loading`() {
         val state = viewModel.uiState.value
-        assertEquals("", state.email)
-        assertEquals("", state.password)
-        assertEquals("", state.confirmPassword)
-        assertFalse(state.isLoading)
-        assertNull(state.errorMessage)
+        assertThat(state.email).isEqualTo("")
+        assertThat(state.password).isEqualTo("")
+        assertThat(state.confirmPassword).isEqualTo("")
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.errorMessage).isNull()
     }
 
     @Test
     fun `onEmailChange updates email and clears errorMessage`() {
         viewModel.onEmailChange("user@example.com")
-        assertEquals("user@example.com", viewModel.uiState.value.email)
-        assertNull(viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.email).isEqualTo("user@example.com")
+        assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
     @Test
     fun `onPasswordChange updates password and clears errorMessage`() {
         viewModel.onPasswordChange("secret123")
-        assertEquals("secret123", viewModel.uiState.value.password)
-        assertNull(viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.password).isEqualTo("secret123")
+        assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
     @Test
     fun `onConfirmPasswordChange updates confirmPassword and clears errorMessage`() {
         viewModel.onConfirmPasswordChange("secret123")
-        assertEquals("secret123", viewModel.uiState.value.confirmPassword)
-        assertNull(viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.confirmPassword).isEqualTo("secret123")
+        assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
     @Test
@@ -69,8 +70,8 @@ class RegisterViewModelTest {
 
         viewModel.register("兩次輸入的密碼不一致")
 
-        assertEquals("兩次輸入的密碼不一致", viewModel.uiState.value.errorMessage)
-        assertFalse(viewModel.uiState.value.isLoading)
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("兩次輸入的密碼不一致")
+        assertThat(viewModel.uiState.value.isLoading).isFalse()
     }
 
     @Test
@@ -96,7 +97,7 @@ class RegisterViewModelTest {
         viewModel.register("mismatch")
 
         val state = viewModel.uiState.value
-        assertFalse(state.isLoading)
-        assertEquals("Email already in use", state.errorMessage)
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.errorMessage).isEqualTo("Email already in use")
     }
 }

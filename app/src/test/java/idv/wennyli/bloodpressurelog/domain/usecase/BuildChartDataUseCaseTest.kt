@@ -1,12 +1,14 @@
 package idv.wennyli.bloodpressurelog.domain.usecase
 
+import assertk.assertThat
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
 import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.ui.view.trends.TrendMetric
 import idv.wennyli.bloodpressurelog.ui.view.trends.TrendRange
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -26,7 +28,7 @@ class BuildChartDataUseCaseTest {
             recordedAt = epochMillis(date),
         )
 
-    @Before
+    @BeforeTest
     fun setUp() {
         useCase = BuildChartDataUseCase()
     }
@@ -38,9 +40,9 @@ class BuildChartDataUseCaseTest {
         val (_, labels14) = useCase(emptyList(), TrendRange.DAYS_14, TrendMetric.SYSTOLIC)
         val (_, labels30) = useCase(emptyList(), TrendRange.DAYS_30, TrendMetric.SYSTOLIC)
 
-        assertEquals(7, labels7.size)
-        assertEquals(14, labels14.size)
-        assertEquals(30, labels30.size)
+        assertThat(labels7).hasSize(7)
+        assertThat(labels14).hasSize(14)
+        assertThat(labels30).hasSize(30)
     }
 
     /** 傳入空紀錄清單時，圖表資料點應為空，不應拋出例外。 */
@@ -48,7 +50,7 @@ class BuildChartDataUseCaseTest {
     fun `empty records produce empty points`() {
         val (points, _) = useCase(emptyList(), TrendRange.DAYS_7, TrendMetric.SYSTOLIC)
 
-        assertTrue(points.isEmpty())
+        assertThat(points).isEmpty()
     }
 
     /** 超出時間範圍的紀錄（本例為 10 天前，超出 7 天範圍）應被過濾，不出現在圖表資料點中。 */
@@ -62,7 +64,7 @@ class BuildChartDataUseCaseTest {
 
         val (points, _) = useCase(records, TrendRange.DAYS_7, TrendMetric.SYSTOLIC)
 
-        assertEquals(1, points.size)
+        assertThat(points).hasSize(1)
     }
 
     /** 同一天有多筆紀錄時，應合併為單一資料點並取平均值（120 + 140) / 2 = 130）。 */
@@ -76,8 +78,8 @@ class BuildChartDataUseCaseTest {
 
         val (points, _) = useCase(records, TrendRange.DAYS_7, TrendMetric.SYSTOLIC)
 
-        assertEquals(1, points.size)
-        assertEquals(130f, points[0].second)
+        assertThat(points).hasSize(1)
+        assertThat(points[0].second).isEqualTo(130f)
     }
 
     /** 指標為 [TrendMetric.DIASTOLIC] 時，y 軸值應取舒張壓平均，而非收縮壓。 */
@@ -88,8 +90,8 @@ class BuildChartDataUseCaseTest {
 
         val (points, _) = useCase(records, TrendRange.DAYS_7, TrendMetric.DIASTOLIC)
 
-        assertEquals(1, points.size)
-        assertEquals(80f, points[0].second)
+        assertThat(points).hasSize(1)
+        assertThat(points[0].second).isEqualTo(80f)
     }
 
     /** 指標為 [TrendMetric.PULSE] 時，y 軸值應取脈搏平均，而非收縮壓或舒張壓。 */
@@ -100,8 +102,8 @@ class BuildChartDataUseCaseTest {
 
         val (points, _) = useCase(records, TrendRange.DAYS_7, TrendMetric.PULSE)
 
-        assertEquals(1, points.size)
-        assertEquals(72f, points[0].second)
+        assertThat(points).hasSize(1)
+        assertThat(points[0].second).isEqualTo(72f)
     }
 
     /**
@@ -120,9 +122,9 @@ class BuildChartDataUseCaseTest {
         val (points, _) = useCase(records, TrendRange.DAYS_7, TrendMetric.SYSTOLIC)
 
         val sortedPoints = points.sortedBy { it.first }
-        assertEquals(2, sortedPoints.size)
-        assertEquals(3f, sortedPoints[0].first)   // today.minusDays(3) → dayIndex 3
-        assertEquals(6f, sortedPoints[1].first)   // today → dayIndex 6 (range.days - 1)
+        assertThat(sortedPoints).hasSize(2)
+        assertThat(sortedPoints[0].first).isEqualTo(3f)   // today.minusDays(3) → dayIndex 3
+        assertThat(sortedPoints[1].first).isEqualTo(6f)   // today → dayIndex 6 (range.days - 1)
     }
 
     /** 14 天範圍應包含今天與 10 天前的紀錄，排除 15 天前（超出範圍）的紀錄。 */
@@ -137,6 +139,6 @@ class BuildChartDataUseCaseTest {
 
         val (points, _) = useCase(records, TrendRange.DAYS_14, TrendMetric.SYSTOLIC)
 
-        assertEquals(2, points.size)
+        assertThat(points).hasSize(2)
     }
 }

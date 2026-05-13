@@ -1,23 +1,24 @@
 package idv.wennyli.bloodpressurelog.ui.view.login
 
 import app.cash.turbine.test
-import idv.wennyli.bloodpressurelog.MainDispatcherRule
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
 import com.google.firebase.auth.FirebaseUser
+import idv.wennyli.bloodpressurelog.MainDispatcherRule
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Before
 import org.junit.Rule
-import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class LoginViewModelTest {
@@ -28,7 +29,7 @@ class LoginViewModelTest {
     private val mockAuthRepository = mockk<AuthRepository>()
     private lateinit var viewModel: LoginViewModel
 
-    @Before
+    @BeforeTest
     fun setUp() {
         viewModel = LoginViewModel(mockAuthRepository)
     }
@@ -36,24 +37,24 @@ class LoginViewModelTest {
     @Test
     fun `initial state is empty and not loading`() {
         val state = viewModel.uiState.value
-        assertEquals("", state.email)
-        assertEquals("", state.password)
-        assertFalse(state.isLoading)
-        assertNull(state.errorMessage)
+        assertThat(state.email).isEqualTo("")
+        assertThat(state.password).isEqualTo("")
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.errorMessage).isNull()
     }
 
     @Test
     fun `onEmailChange updates email and clears errorMessage`() {
         viewModel.onEmailChange("user@example.com")
-        assertEquals("user@example.com", viewModel.uiState.value.email)
-        assertNull(viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.email).isEqualTo("user@example.com")
+        assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
     @Test
     fun `onPasswordChange updates password and clears errorMessage`() {
         viewModel.onPasswordChange("secret123")
-        assertEquals("secret123", viewModel.uiState.value.password)
-        assertNull(viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.password).isEqualTo("secret123")
+        assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
     @Test
@@ -92,8 +93,8 @@ class LoginViewModelTest {
         viewModel.signInWithEmail()
 
         val state = viewModel.uiState.value
-        assertFalse(state.isLoading)
-        assertEquals("Bad credentials", state.errorMessage)
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.errorMessage).isEqualTo("Bad credentials")
     }
 
     @Test
@@ -114,8 +115,8 @@ class LoginViewModelTest {
         viewModel.signInAnonymously()
 
         val state = viewModel.uiState.value
-        assertFalse(state.isLoading)
-        assertEquals("Failed", state.errorMessage)
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.errorMessage).isEqualTo("Failed")
     }
 
     @Test
@@ -125,6 +126,6 @@ class LoginViewModelTest {
 
         viewModel.clearError()
 
-        assertNull(viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 }
