@@ -4,8 +4,10 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
+import idv.wennyli.bloodpressurelog.utils.ResourceProvider
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -31,6 +33,7 @@ data class AddEditRecordUiState(
 @HiltViewModel
 class AddEditRecordViewModel @Inject constructor(
     private val repository: BloodPressureRepository,
+    private val resourceProvider: ResourceProvider,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -66,10 +69,14 @@ class AddEditRecordViewModel @Inject constructor(
                         )
                     }
                 } else {
-                    _uiState.update { it.copy(isLoading = false, errorMessage = "找不到紀錄") }
+                    _uiState.update {
+                        it.copy(isLoading = false, errorMessage = resourceProvider.getString(R.string.error_record_not_found))
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "載入失敗") }
+                _uiState.update {
+                    it.copy(isLoading = false, errorMessage = e.message ?: resourceProvider.getString(R.string.error_record_load_failed))
+                }
             }
         }
     }
@@ -103,7 +110,7 @@ class AddEditRecordViewModel @Inject constructor(
         if (systolic == null || diastolic == null || pulse == null ||
             systolic <= 0 || diastolic <= 0 || pulse <= 0
         ) {
-            _uiState.update { it.copy(errorMessage = "請輸入有效的正整數數值") }
+            _uiState.update { it.copy(errorMessage = resourceProvider.getString(R.string.error_record_invalid_input)) }
             return
         }
 
@@ -137,7 +144,9 @@ class AddEditRecordViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false) }
                 _savedSuccessfully.emit(Unit)
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "儲存失敗") }
+                _uiState.update {
+                    it.copy(isLoading = false, errorMessage = e.message ?: resourceProvider.getString(R.string.error_record_save_failed))
+                }
             }
         }
     }

@@ -2,10 +2,12 @@ package idv.wennyli.bloodpressurelog.ui.view.record
 
 import app.cash.turbine.test
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
+import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
+import idv.wennyli.bloodpressurelog.utils.ResourceProvider
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -32,6 +34,7 @@ class RecordListViewModelTest {
 
     private val mockRepository = mockk<BloodPressureRepository>()
     private val mockAuthRepository = mockk<AuthRepository>()
+    private val mockResourceProvider = mockk<ResourceProvider>()
     private lateinit var viewModel: RecordListViewModel
 
     private val sampleRecords = listOf(
@@ -43,7 +46,8 @@ class RecordListViewModelTest {
     @Before
     fun setUp() {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Loading)
-        viewModel = RecordListViewModel(mockRepository, mockAuthRepository)
+        every { mockResourceProvider.getString(R.string.error_delete_record_failed) } returns "刪除失敗，請稍後再試"
+        viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
     }
 
     @Test
@@ -58,7 +62,7 @@ class RecordListViewModelTest {
     fun `success state populates records sorted by recordedAt descending`() {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(sampleRecords))
 
-        viewModel = RecordListViewModel(mockRepository, mockAuthRepository)
+        viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
 
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
@@ -71,7 +75,7 @@ class RecordListViewModelTest {
         val error = RuntimeException("Firestore error")
         every { mockRepository.observeRecords() } returns flowOf(DataState.Error(error, "Firestore error"))
 
-        viewModel = RecordListViewModel(mockRepository, mockAuthRepository)
+        viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
 
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
@@ -82,7 +86,7 @@ class RecordListViewModelTest {
     fun `loading state sets isLoading true`() {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Loading)
 
-        viewModel = RecordListViewModel(mockRepository, mockAuthRepository)
+        viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
 
         assertTrue(viewModel.uiState.value.isLoading)
     }
@@ -109,7 +113,7 @@ class RecordListViewModelTest {
     fun `deleteRecord calls repository deleteRecord with correct id`() = runTest {
         coEvery { mockRepository.deleteRecord(any()) } just Runs
 
-        viewModel.deleteRecord("record-456", "刪除失敗，請稍後再試")
+        viewModel.deleteRecord("record-456")
 
         coVerify { mockRepository.deleteRecord("record-456") }
     }
@@ -118,7 +122,7 @@ class RecordListViewModelTest {
     fun `deleteRecord sets errorMessage on failure`() = runTest {
         coEvery { mockRepository.deleteRecord(any()) } throws RuntimeException("Firestore error")
 
-        viewModel.deleteRecord("record-456", "刪除失敗，請稍後再試")
+        viewModel.deleteRecord("record-456")
 
         assertEquals("刪除失敗，請稍後再試", viewModel.uiState.value.errorMessage)
     }
@@ -126,10 +130,10 @@ class RecordListViewModelTest {
     @Test
     fun `deleteRecord does not set errorMessage on success`() = runTest {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(emptyList()))
-        viewModel = RecordListViewModel(mockRepository, mockAuthRepository)
+        viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
         coEvery { mockRepository.deleteRecord(any()) } just Runs
 
-        viewModel.deleteRecord("record-456", "刪除失敗，請稍後再試")
+        viewModel.deleteRecord("record-456")
 
         assertNull(viewModel.uiState.value.errorMessage)
     }
@@ -147,7 +151,7 @@ class RecordListViewModelTest {
     fun `success with empty list shows empty state`() {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(emptyList()))
 
-        viewModel = RecordListViewModel(mockRepository, mockAuthRepository)
+        viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
 
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)

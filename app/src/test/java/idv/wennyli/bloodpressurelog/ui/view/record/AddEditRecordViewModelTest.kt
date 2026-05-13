@@ -3,11 +3,14 @@ package idv.wennyli.bloodpressurelog.ui.view.record
 import app.cash.turbine.test
 import androidx.lifecycle.SavedStateHandle
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
+import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
+import idv.wennyli.bloodpressurelog.utils.ResourceProvider
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -28,14 +31,23 @@ class AddEditRecordViewModelTest {
     val mainDispatcherRule = MainDispatcherRule(UnconfinedTestDispatcher())
 
     private val mockRepository = mockk<BloodPressureRepository>()
+    private val mockResourceProvider = mockk<ResourceProvider>()
+
+    @Before
+    fun setUp() {
+        every { mockResourceProvider.getString(R.string.error_record_invalid_input) } returns "請輸入有效的正整數數值"
+        every { mockResourceProvider.getString(R.string.error_record_not_found) } returns "找不到紀錄"
+    }
 
     private fun addModeViewModel() = AddEditRecordViewModel(
         repository = mockRepository,
+        resourceProvider = mockResourceProvider,
         savedStateHandle = SavedStateHandle(mapOf("recordId" to null)),
     )
 
     private fun editModeViewModel(recordId: String) = AddEditRecordViewModel(
         repository = mockRepository,
+        resourceProvider = mockResourceProvider,
         savedStateHandle = SavedStateHandle(mapOf("recordId" to recordId)),
     )
 

@@ -1,6 +1,5 @@
 package idv.wennyli.bloodpressurelog.data.repository
 
-import android.content.Context
 import com.google.android.gms.tasks.OnFailureListener
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.android.gms.tasks.Task
@@ -9,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.data.model.AuthException
+import idv.wennyli.bloodpressurelog.utils.ResourceProvider
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -23,13 +23,13 @@ class AuthRepositoryImplTest {
 
     private val mockAuth = mockk<FirebaseAuth>()
     private val mockUser = mockk<FirebaseUser>()
-    private val mockContext = mockk<Context>()
+    private val mockResourceProvider = mockk<ResourceProvider>()
     private lateinit var repository: AuthRepositoryImpl
 
     @Before
     fun setUp() {
-        every { mockContext.getString(R.string.error_auth_generic) } returns "操作失敗，請稍後再試"
-        repository = AuthRepositoryImpl(mockAuth, mockContext)
+        every { mockResourceProvider.getString(R.string.error_auth_generic) } returns "操作失敗，請稍後再試"
+        repository = AuthRepositoryImpl(mockAuth, mockResourceProvider)
     }
 
     @Test

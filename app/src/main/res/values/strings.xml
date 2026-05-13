@@ -37,6 +37,10 @@
     <string name="label_note">備註（選填）</string>
     <string name="section_title_recorded_at">量測時間</string>
     <string name="dialog_title_time_picker">選擇時間</string>
+    <string name="error_record_not_found">找不到紀錄</string>
+    <string name="error_record_load_failed">載入失敗</string>
+    <string name="error_record_invalid_input">請輸入有效的正整數數值</string>
+    <string name="error_record_save_failed">儲存失敗</string>
 
     <!-- Trends Screen -->
     <string name="screen_title_trends">趨勢</string>

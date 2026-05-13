@@ -1,12 +1,11 @@
 package idv.wennyli.bloodpressurelog.data.repository
 
-import android.content.Context
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import dagger.hilt.android.qualifiers.ApplicationContext
 import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.data.model.AuthException
+import idv.wennyli.bloodpressurelog.utils.ResourceProvider
 import idv.wennyli.bloodpressurelog.utils.toAuthErrorStringRes
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -18,7 +17,7 @@ import kotlin.coroutines.resumeWithException
 
 class AuthRepositoryImpl @Inject constructor(
     private val auth: FirebaseAuth,
-    @ApplicationContext private val context: Context,
+    private val resourceProvider: ResourceProvider,
 ) : AuthRepository {
 
     override val currentUser: FirebaseUser?
@@ -36,7 +35,7 @@ class AuthRepositoryImpl @Inject constructor(
                 .addOnSuccessListener { continuation.resume(Unit) }
                 .addOnFailureListener { e ->
                     continuation.resumeWithException(
-                        AuthException(context.getString(e.toAuthErrorStringRes()), e)
+                        AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
                     )
                 }
         }
@@ -47,7 +46,7 @@ class AuthRepositoryImpl @Inject constructor(
                 .addOnSuccessListener { continuation.resume(Unit) }
                 .addOnFailureListener { e ->
                     continuation.resumeWithException(
-                        AuthException(context.getString(e.toAuthErrorStringRes()), e)
+                        AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
                     )
                 }
         }
@@ -65,20 +64,20 @@ class AuthRepositoryImpl @Inject constructor(
                 }
                 .addOnFailureListener { e ->
                     continuation.resumeWithException(
-                        AuthException(context.getString(e.toAuthErrorStringRes()), e)
+                        AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
                     )
                 }
         }
 
     override suspend fun sendEmailVerification() {
         val user = auth.currentUser
-            ?: throw AuthException(context.getString(R.string.error_auth_generic))
+            ?: throw AuthException(resourceProvider.getString(R.string.error_auth_generic))
         suspendCancellableCoroutine<Unit> { continuation ->
             user.sendEmailVerification()
                 .addOnSuccessListener { continuation.resume(Unit) }
                 .addOnFailureListener { e ->
                     continuation.resumeWithException(
-                        AuthException(context.getString(e.toAuthErrorStringRes()), e)
+                        AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
                     )
                 }
         }
@@ -90,7 +89,7 @@ class AuthRepositoryImpl @Inject constructor(
                 .addOnSuccessListener { continuation.resume(Unit) }
                 .addOnFailureListener { e ->
                     continuation.resumeWithException(
-                        AuthException(context.getString(e.toAuthErrorStringRes()), e)
+                        AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
                     )
                 }
         }
