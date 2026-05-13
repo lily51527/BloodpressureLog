@@ -162,14 +162,25 @@ internal fun TrendsContent(
     }
 }
 
+/**
+ * 趨勢折線圖元件，使用 Vico 圖表庫繪製。
+ *
+ * @param chartPoints 圖表資料點清單，由 [BuildChartDataUseCase] 產生。
+ *                    first 為 x 軸值（相對於起始日的 dayIndex），second 為 y 軸值（指標平均值）。
+ * @param xLabels x 軸標籤清單（格式：M/d），索引對應 dayIndex，長度等於所選時間範圍的天數。
+ */
 @Composable
 private fun TrendChart(
     chartPoints: List<Pair<Float, Float>>,
     xLabels: List<String>,
     modifier: Modifier = Modifier,
 ) {
+    // Vico 的資料橋接器，負責將資料傳遞給圖表層。
+    // 使用 remember 確保在 recomposition 之間保持同一個實例，避免重複建立。
     val modelProducer = remember { CartesianChartModelProducer() }
 
+    // 當 chartPoints 變更時（切換時間範圍或指標），以 transaction 方式更新圖表資料。
+    // runTransaction 為非同步操作，Vico 會在資料準備就緒後自動觸發重繪。
     LaunchedEffect(chartPoints) {
         modelProducer.runTransaction {
             lineSeries {
@@ -181,6 +192,9 @@ private fun TrendChart(
         }
     }
 
+    // 將 Vico 傳入的 x 軸數值（dayIndex）對應回 xLabels 中的日期字串。
+    // 使用 remember(xLabels) 讓 formatter 在 xLabels 更新時同步重建。
+    // 注意：Vico 要求回傳值不可為空字串，fallback 使用 index.toString() 而非空白。
     val valueFormatter = remember(xLabels) {
         CartesianValueFormatter { _, value, _ ->
             val index = value.toInt()
@@ -190,9 +204,11 @@ private fun TrendChart(
 
     CartesianChartHost(
         chart = rememberCartesianChart(
-            rememberLineCartesianLayer(),
-            startAxis = VerticalAxis.rememberStart(),
-            bottomAxis = HorizontalAxis.rememberBottom(valueFormatter = valueFormatter),
+            rememberLineCartesianLayer(),                // 折線圖層
+            startAxis = VerticalAxis.rememberStart(),    // 左側 y 軸
+            bottomAxis = HorizontalAxis.rememberBottom(  // 底部 x 軸，套用日期標籤
+                valueFormatter = valueFormatter,
+            ),
         ),
         modelProducer = modelProducer,
         modifier = modifier,

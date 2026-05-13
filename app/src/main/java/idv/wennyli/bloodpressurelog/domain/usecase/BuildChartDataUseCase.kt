@@ -9,8 +9,28 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
+/**
+ * 將血壓紀錄轉換為趨勢圖表所需資料的 UseCase。
+ *
+ * 負責以下業務邏輯：
+ * - 依指定時間範圍（[TrendRange]）過濾紀錄
+ * - 將同一天的多筆紀錄計算日平均值
+ * - 將日期轉換為相對於起始日的 x 軸索引（dayIndex）
+ * - 產生對應範圍天數的 x 軸日期標籤（格式：M/d）
+ *
+ * @return [Pair]，first 為圖表資料點清單（x = dayIndex, y = 指標平均值），
+ *         second 為 x 軸標籤清單（長度等於 [TrendRange.days]）
+ */
 class BuildChartDataUseCase @Inject constructor() {
 
+    /**
+     * 執行圖表資料轉換。
+     *
+     * @param records 從 Repository 取得的血壓紀錄清單
+     * @param range 要顯示的時間範圍（7 / 14 / 30 天）
+     * @param metric 要顯示的指標（收縮壓 / 舒張壓 / 脈搏）
+     * @return 圖表資料點與 x 軸標籤的配對
+     */
     operator fun invoke(
         records: List<BloodPressureRecord>,
         range: TrendRange,

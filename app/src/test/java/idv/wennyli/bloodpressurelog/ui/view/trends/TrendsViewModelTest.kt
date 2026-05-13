@@ -49,12 +49,14 @@ class TrendsViewModelTest {
 
     private fun createViewModel() = TrendsViewModel(mockRepository, mockBuildChartDataUseCase)
 
+    /** Repository 尚未回傳資料（預設為 [DataState.Loading]）時，初始 uiState 應為 loading。 */
     @Test
     fun `initial state is loading`() {
         val viewModel = createViewModel()
         assertTrue(viewModel.uiState.value.isLoading)
     }
 
+    /** UseCase 回傳空圖表資料點時，[TrendsUiState.isEmpty] 應為 true，且無 loading 與 errorMessage。 */
     @Test
     fun `success with no chart points sets isEmpty true`() {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(emptyList()))
@@ -68,6 +70,7 @@ class TrendsViewModelTest {
         assertNull(state.errorMessage)
     }
 
+    /** Repository 回傳 [DataState.Error] 時，[TrendsUiState.errorMessage] 應等於 error 中的 message。 */
     @Test
     fun `error state sets errorMessage`() {
         every { mockRepository.observeRecords() } returns
@@ -80,6 +83,10 @@ class TrendsViewModelTest {
         assertEquals("載入失敗", state.errorMessage)
     }
 
+    /**
+     * Repository 有資料時，圖表資料點應完全來自 UseCase 的回傳值，
+     * ViewModel 不應自行計算或修改，數量應與 UseCase 回傳的資料點數相符。
+     */
     @Test
     fun `success with records produces chart points from use case`() {
         val today = LocalDate.now()
@@ -98,6 +105,11 @@ class TrendsViewModelTest {
         assertEquals(2, state.chartPoints.size)
     }
 
+    /**
+     * 呼叫 [TrendsViewModel.onRangeChange] 後：
+     * - [TrendsUiState.selectedRange] 應更新為新範圍
+     * - UseCase 應以新的 range 重新呼叫，[TrendsUiState.xLabels] 數量應對應新範圍天數
+     */
     @Test
     fun `onRangeChange updates selectedRange and calls use case with new range`() {
         val today = LocalDate.now()
@@ -116,6 +128,11 @@ class TrendsViewModelTest {
         assertEquals(14, state.xLabels.size)
     }
 
+    /**
+     * 呼叫 [TrendsViewModel.onMetricChange] 後：
+     * - [TrendsUiState.selectedMetric] 應更新為新指標
+     * - UseCase 應以新的 metric 重新呼叫，圖表資料點應反映新指標的數值
+     */
     @Test
     fun `onMetricChange updates selectedMetric and calls use case with new metric`() = runTest {
         val today = LocalDate.now()
