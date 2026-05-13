@@ -4,6 +4,7 @@ import idv.wennyli.bloodpressurelog.MainDispatcherRule
 import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
+import idv.wennyli.bloodpressurelog.domain.usecase.BuildChartDataUseCase
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -27,6 +28,7 @@ class TrendsViewModelTest {
     val mainDispatcherRule = MainDispatcherRule(UnconfinedTestDispatcher())
 
     private val mockRepository = mockk<BloodPressureRepository>()
+    private val mockBuildChartDataUseCase = mockk<BuildChartDataUseCase>()
 
     private fun epochMillis(date: LocalDate): Long =
         date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
@@ -45,110 +47,107 @@ class TrendsViewModelTest {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Loading)
     }
 
+    private fun createViewModel() = TrendsViewModel(mockRepository, mockBuildChartDataUseCase)
+
+    /** Repository 尚未回傳資料（預設為 [DataState.Loading]）時，初始 uiState 應為 loading。 */
     @Test
     fun `initial state is loading`() {
-        val viewModel = TrendsViewModel(mockRepository)
+        val viewModel = createViewModel()
         assertTrue(viewModel.uiState.value.isLoading)
     }
 
+    /** UseCase 回傳空圖表資料點時，[TrendsUiState.isEmpty] 應為 true，且無 loading 與 errorMessage。 */
     @Test
-    fun `success with no records sets isEmpty true`() {
+    fun `success with no chart points sets isEmpty true`() {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(emptyList()))
-        val viewModel = TrendsViewModel(mockRepository)
+        every { mockBuildChartDataUseCase(any(), any(), any()) } returns (emptyList<Pair<Float, Float>>() to emptyList())
+
+        val viewModel = createViewModel()
+
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertTrue(state.isEmpty)
         assertNull(state.errorMessage)
     }
 
+    /** Repository 回傳 [DataState.Error] 時，[TrendsUiState.errorMessage] 應等於 error 中的 message。 */
     @Test
     fun `error state sets errorMessage`() {
         every { mockRepository.observeRecords() } returns
             flowOf(DataState.Error(RuntimeException("error"), "載入失敗"))
-        val viewModel = TrendsViewModel(mockRepository)
+
+        val viewModel = createViewModel()
+
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertEquals("載入失敗", state.errorMessage)
     }
 
+    /**
+     * Repository 有資料時，圖表資料點應完全來自 UseCase 的回傳值，
+     * ViewModel 不應自行計算或修改，數量應與 UseCase 回傳的資料點數相符。
+     */
     @Test
-    fun `records within range produce chart points`() {
+    fun `success with records produces chart points from use case`() {
         val today = LocalDate.now()
         val records = listOf(
             record(120, 80, 70, today),
             record(130, 85, 72, today.minusDays(1)),
         )
+        val fakePoints = listOf(5f to 120f, 6f to 130f)
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(records))
-        val viewModel = TrendsViewModel(mockRepository)
+        every { mockBuildChartDataUseCase(any(), any(), any()) } returns (fakePoints to emptyList())
+
+        val viewModel = createViewModel()
+
         val state = viewModel.uiState.value
         assertFalse(state.isEmpty)
         assertEquals(2, state.chartPoints.size)
     }
 
+    /**
+     * 呼叫 [TrendsViewModel.onRangeChange] 後：
+     * - [TrendsUiState.selectedRange] 應更新為新範圍
+     * - UseCase 應以新的 range 重新呼叫，[TrendsUiState.xLabels] 數量應對應新範圍天數
+     */
     @Test
-    fun `records outside range are excluded`() {
+    fun `onRangeChange updates selectedRange and calls use case with new range`() {
         val today = LocalDate.now()
-        val records = listOf(
-            record(120, 80, 70, today),
-            record(130, 85, 72, today.minusDays(10)),
-        )
+        val records = listOf(record(120, 80, 70, today))
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(records))
-        val viewModel = TrendsViewModel(mockRepository)
-        assertEquals(1, viewModel.uiState.value.chartPoints.size)
-    }
+        every { mockBuildChartDataUseCase(any(), TrendRange.DAYS_7, any()) } returns
+            (listOf(6f to 120f) to List(7) { "" })
+        every { mockBuildChartDataUseCase(any(), TrendRange.DAYS_14, any()) } returns
+            (listOf(6f to 120f) to List(14) { "" })
 
-    @Test
-    fun `onRangeChange updates selectedRange and recomputes data`() {
-        val today = LocalDate.now()
-        val records = listOf(
-            record(120, 80, 70, today),
-            record(130, 85, 72, today.minusDays(10)),
-        )
-        every { mockRepository.observeRecords() } returns flowOf(DataState.Success(records))
-        val viewModel = TrendsViewModel(mockRepository)
-
+        val viewModel = createViewModel()
         viewModel.onRangeChange(TrendRange.DAYS_14)
 
         val state = viewModel.uiState.value
         assertEquals(TrendRange.DAYS_14, state.selectedRange)
-        assertEquals(2, state.chartPoints.size)
         assertEquals(14, state.xLabels.size)
     }
 
+    /**
+     * 呼叫 [TrendsViewModel.onMetricChange] 後：
+     * - [TrendsUiState.selectedMetric] 應更新為新指標
+     * - UseCase 應以新的 metric 重新呼叫，圖表資料點應反映新指標的數值
+     */
     @Test
-    fun `onMetricChange updates selectedMetric and recomputes diastolic data`() = runTest {
+    fun `onMetricChange updates selectedMetric and calls use case with new metric`() = runTest {
         val today = LocalDate.now()
         val records = listOf(record(120, 80, 70, today))
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(records))
-        val viewModel = TrendsViewModel(mockRepository)
+        every { mockBuildChartDataUseCase(any(), any(), TrendMetric.SYSTOLIC) } returns
+            (listOf(6f to 120f) to emptyList())
+        every { mockBuildChartDataUseCase(any(), any(), TrendMetric.DIASTOLIC) } returns
+            (listOf(6f to 80f) to emptyList())
 
+        val viewModel = createViewModel()
         viewModel.onMetricChange(TrendMetric.DIASTOLIC)
 
         val state = viewModel.uiState.value
         assertEquals(TrendMetric.DIASTOLIC, state.selectedMetric)
-        assertEquals(1, state.chartPoints.size)
         assertEquals(80f, state.chartPoints[0].second)
-    }
-
-    @Test
-    fun `buildChartData daily average is correct for multiple records on same day`() {
-        val viewModel = TrendsViewModel(mockRepository)
-        val today = LocalDate.now()
-        val records = listOf(
-            record(120, 80, 70, today),
-            record(140, 90, 80, today),
-        )
-        val (points, _) = viewModel.buildChartData(records, TrendRange.DAYS_7, TrendMetric.SYSTOLIC)
-        assertEquals(1, points.size)
-        assertEquals(130f, points[0].second)
-    }
-
-    @Test
-    fun `buildChartData xLabels count matches range days`() {
-        val viewModel = TrendsViewModel(mockRepository)
-        val (_, labels7) = viewModel.buildChartData(emptyList(), TrendRange.DAYS_7, TrendMetric.SYSTOLIC)
-        val (_, labels30) = viewModel.buildChartData(emptyList(), TrendRange.DAYS_30, TrendMetric.SYSTOLIC)
-        assertEquals(7, labels7.size)
-        assertEquals(30, labels30.size)
     }
 }
