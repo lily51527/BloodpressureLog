@@ -1,7 +1,8 @@
 package idv.wennyli.bloodpressurelog.data.model
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import kotlin.test.Test
 import java.time.LocalDateTime
 import java.time.ZoneId
 
@@ -27,41 +28,41 @@ class TimeSlotTest {
 
     @Test
     fun `hour 0 is NIGHT`() {
-        assertEquals(TimeSlot.NIGHT, recordAt(0).timeSlot)
+        assertThat(recordAt(0).timeSlot).isEqualTo(TimeSlot.NIGHT)
     }
 
     @Test
     fun `hour 5 is NIGHT`() {
-        assertEquals(TimeSlot.NIGHT, recordAt(5, 59).timeSlot)
+        assertThat(recordAt(5, 59).timeSlot).isEqualTo(TimeSlot.NIGHT)
     }
 
     @Test
     fun `hour 6 is MORNING`() {
-        assertEquals(TimeSlot.MORNING, recordAt(6).timeSlot)
+        assertThat(recordAt(6).timeSlot).isEqualTo(TimeSlot.MORNING)
     }
 
     @Test
     fun `hour 11 is MORNING`() {
-        assertEquals(TimeSlot.MORNING, recordAt(11, 59).timeSlot)
+        assertThat(recordAt(11, 59).timeSlot).isEqualTo(TimeSlot.MORNING)
     }
 
     @Test
     fun `hour 12 is AFTERNOON`() {
-        assertEquals(TimeSlot.AFTERNOON, recordAt(12).timeSlot)
+        assertThat(recordAt(12).timeSlot).isEqualTo(TimeSlot.AFTERNOON)
     }
 
     @Test
     fun `hour 17 is AFTERNOON`() {
-        assertEquals(TimeSlot.AFTERNOON, recordAt(17, 59).timeSlot)
+        assertThat(recordAt(17, 59).timeSlot).isEqualTo(TimeSlot.AFTERNOON)
     }
 
     @Test
     fun `hour 18 is EVENING`() {
-        assertEquals(TimeSlot.EVENING, recordAt(18).timeSlot)
+        assertThat(recordAt(18).timeSlot).isEqualTo(TimeSlot.EVENING)
     }
 
     @Test
     fun `hour 23 is EVENING`() {
-        assertEquals(TimeSlot.EVENING, recordAt(23, 59).timeSlot)
+        assertThat(recordAt(23, 59).timeSlot).isEqualTo(TimeSlot.EVENING)
     }
 }

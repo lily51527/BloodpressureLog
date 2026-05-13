@@ -1,40 +1,41 @@
 package idv.wennyli.bloodpressurelog.data.model
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertSame
-import org.junit.Test
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isSameInstanceAs
+import kotlin.test.Test
 
 class DataStateTest {
 
     @Test
     fun `Loading is singleton`() {
-        assertSame(DataState.Loading, DataState.Loading)
+        assertThat(DataState.Loading).isSameInstanceAs(DataState.Loading)
     }
 
     @Test
     fun `Success holds data`() {
         val state = DataState.Success(42)
-        assertEquals(42, state.data)
+        assertThat(state.data).isEqualTo(42)
     }
 
     @Test
     fun `Success with list holds data`() {
         val list = listOf("a", "b")
         val state = DataState.Success(list)
-        assertEquals(list, state.data)
+        assertThat(state.data).isEqualTo(list)
     }
 
     @Test
     fun `Error holds throwable and message`() {
         val throwable = RuntimeException("test error")
         val state = DataState.Error(throwable, "test error")
-        assertSame(throwable, state.throwable)
-        assertEquals("test error", state.message)
+        assertThat(state.throwable).isSameInstanceAs(throwable)
+        assertThat(state.message).isEqualTo("test error")
     }
 
     @Test
     fun `Success with Unit`() {
         val state = DataState.Success(Unit)
-        assertEquals(Unit, state.data)
+        assertThat(state.data).isEqualTo(Unit)
     }
 }
