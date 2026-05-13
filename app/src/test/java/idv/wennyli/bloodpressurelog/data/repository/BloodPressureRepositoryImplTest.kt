@@ -1,6 +1,12 @@
 package idv.wennyli.bloodpressurelog.data.repository
 
 import app.cash.turbine.test
+import assertk.assertThat
+import assertk.assertions.hasSize
+import assertk.assertions.isEqualTo
+import assertk.assertions.isEmpty
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNull
 import com.google.android.gms.tasks.OnFailureListener
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.android.gms.tasks.Task
@@ -21,12 +27,9 @@ import idv.wennyli.bloodpressurelog.data.model.DataState
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.junit.Assert.assertNull
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
 
 class BloodPressureRepositoryImplTest {
 
@@ -40,7 +43,7 @@ class BloodPressureRepositoryImplTest {
 
     private lateinit var repository: BloodPressureRepositoryImpl
 
-    @Before
+    @BeforeTest
     fun setUp() {
         every { mockAuth.currentUser } returns mockUser
         every { mockUser.uid } returns "uid-123"
@@ -60,16 +63,16 @@ class BloodPressureRepositoryImplTest {
         deliverSnapshot(snapshot, null)
 
         repository.observeRecords().test {
-            assertTrue(awaitItem() is DataState.Loading)
+            assertThat(awaitItem()).isInstanceOf(DataState.Loading::class)
             val success = awaitItem() as DataState.Success<*>
             @Suppress("UNCHECKED_CAST")
             val records = success.data as List<BloodPressureRecord>
-            assertEquals(1, records.size)
-            assertEquals("doc-1", records[0].id)
-            assertEquals(120, records[0].systolic)
-            assertEquals(80, records[0].diastolic)
-            assertEquals(70, records[0].pulse)
-            assertEquals("note", records[0].note)
+            assertThat(records).hasSize(1)
+            assertThat(records[0].id).isEqualTo("doc-1")
+            assertThat(records[0].systolic).isEqualTo(120)
+            assertThat(records[0].diastolic).isEqualTo(80)
+            assertThat(records[0].pulse).isEqualTo(70)
+            assertThat(records[0].note).isEqualTo("note")
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -81,10 +84,10 @@ class BloodPressureRepositoryImplTest {
         deliverSnapshot(snapshot, null)
 
         repository.observeRecords().test {
-            assertTrue(awaitItem() is DataState.Loading)
+            assertThat(awaitItem()).isInstanceOf(DataState.Loading::class)
             val success = awaitItem() as DataState.Success<*>
             @Suppress("UNCHECKED_CAST")
-            assertTrue((success.data as List<*>).isEmpty())
+            assertThat(success.data as List<*>).isEmpty()
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -99,10 +102,10 @@ class BloodPressureRepositoryImplTest {
         deliverSnapshot(snapshot, null)
 
         repository.observeRecords().test {
-            assertTrue(awaitItem() is DataState.Loading)
+            assertThat(awaitItem()).isInstanceOf(DataState.Loading::class)
             val success = awaitItem() as DataState.Success<*>
             @Suppress("UNCHECKED_CAST")
-            assertTrue((success.data as List<*>).isEmpty())
+            assertThat(success.data as List<*>).isEmpty()
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -114,10 +117,10 @@ class BloodPressureRepositoryImplTest {
         deliverSnapshot(null, exception)
 
         repository.observeRecords().test {
-            assertTrue(awaitItem() is DataState.Loading)
+            assertThat(awaitItem()).isInstanceOf(DataState.Loading::class)
             val error = awaitItem() as DataState.Error
-            assertEquals(exception, error.throwable)
-            assertEquals("Firestore error", error.message)
+            assertThat(error.throwable).isEqualTo(exception)
+            assertThat(error.message).isEqualTo("Firestore error")
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -162,9 +165,9 @@ class BloodPressureRepositoryImplTest {
 
         val result = repository.getRecord("doc-1")
 
-        assertEquals("doc-1", result?.id)
-        assertEquals(120, result?.systolic)
-        assertEquals(80, result?.diastolic)
+        assertThat(result?.id).isEqualTo("doc-1")
+        assertThat(result?.systolic).isEqualTo(120)
+        assertThat(result?.diastolic).isEqualTo(80)
     }
 
     @Test
@@ -177,7 +180,7 @@ class BloodPressureRepositoryImplTest {
 
         val result = repository.getRecord("invalid")
 
-        assertNull(result)
+        assertThat(result).isNull()
     }
 
     @Test
@@ -187,7 +190,7 @@ class BloodPressureRepositoryImplTest {
         every { mockDocumentRef.get() } returns task
 
         val thrown = runCatching { repository.getRecord("doc-1") }.exceptionOrNull()
-        assertEquals("get failed", thrown?.message)
+        assertThat(thrown?.message).isEqualTo("get failed")
     }
 
     // endregion
@@ -209,7 +212,7 @@ class BloodPressureRepositoryImplTest {
         every { mockCollection.add(any()) } returns task
 
         val thrown = runCatching { repository.addRecord(sampleRecord()) }.exceptionOrNull()
-        assertEquals("add failed", thrown?.message)
+        assertThat(thrown?.message).isEqualTo("add failed")
     }
 
     // endregion
@@ -231,7 +234,7 @@ class BloodPressureRepositoryImplTest {
         every { mockDocumentRef.set(any(), any()) } returns task
 
         val thrown = runCatching { repository.updateRecord(sampleRecord(id = "doc-1")) }.exceptionOrNull()
-        assertEquals("update failed", thrown?.message)
+        assertThat(thrown?.message).isEqualTo("update failed")
     }
 
     // endregion
@@ -244,7 +247,7 @@ class BloodPressureRepositoryImplTest {
 
         repository.observeRecords().test {
             val error = awaitItem() as DataState.Error
-            assertEquals("請重新登入", error.message)
+            assertThat(error.message).isEqualTo("請重新登入")
             awaitComplete()
         }
     }
@@ -254,7 +257,7 @@ class BloodPressureRepositoryImplTest {
         every { mockAuth.currentUser } returns null
 
         val thrown = runCatching { repository.getRecord("doc-1") }.exceptionOrNull()
-        assertEquals("請重新登入", thrown?.message)
+        assertThat(thrown?.message).isEqualTo("請重新登入")
     }
 
     @Test
@@ -262,7 +265,7 @@ class BloodPressureRepositoryImplTest {
         every { mockAuth.currentUser } returns null
 
         val thrown = runCatching { repository.addRecord(sampleRecord()) }.exceptionOrNull()
-        assertEquals("請重新登入", thrown?.message)
+        assertThat(thrown?.message).isEqualTo("請重新登入")
     }
 
     @Test
@@ -270,7 +273,7 @@ class BloodPressureRepositoryImplTest {
         every { mockAuth.currentUser } returns null
 
         val thrown = runCatching { repository.updateRecord(sampleRecord(id = "doc-1")) }.exceptionOrNull()
-        assertEquals("請重新登入", thrown?.message)
+        assertThat(thrown?.message).isEqualTo("請重新登入")
     }
 
     @Test
@@ -278,7 +281,7 @@ class BloodPressureRepositoryImplTest {
         every { mockAuth.currentUser } returns null
 
         val thrown = runCatching { repository.deleteRecord("doc-1") }.exceptionOrNull()
-        assertEquals("請重新登入", thrown?.message)
+        assertThat(thrown?.message).isEqualTo("請重新登入")
     }
 
     // endregion
@@ -300,7 +303,7 @@ class BloodPressureRepositoryImplTest {
         every { mockDocumentRef.delete() } returns task
 
         val thrown = runCatching { repository.deleteRecord("doc-1") }.exceptionOrNull()
-        assertEquals("delete failed", thrown?.message)
+        assertThat(thrown?.message).isEqualTo("delete failed")
     }
 
     // endregion

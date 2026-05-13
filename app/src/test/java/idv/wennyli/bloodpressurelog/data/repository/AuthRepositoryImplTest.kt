@@ -1,5 +1,9 @@
 package idv.wennyli.bloodpressurelog.data.repository
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import kotlin.test.assertIs
 import com.google.android.gms.tasks.OnFailureListener
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.android.gms.tasks.Task
@@ -12,12 +16,9 @@ import idv.wennyli.bloodpressurelog.utils.ResourceProvider
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
 
 class AuthRepositoryImplTest {
 
@@ -26,7 +27,7 @@ class AuthRepositoryImplTest {
     private val mockResourceProvider = mockk<ResourceProvider>()
     private lateinit var repository: AuthRepositoryImpl
 
-    @Before
+    @BeforeTest
     fun setUp() {
         every { mockResourceProvider.getString(R.string.error_auth_generic) } returns "操作失敗，請稍後再試"
         repository = AuthRepositoryImpl(mockAuth, mockResourceProvider)
@@ -35,13 +36,13 @@ class AuthRepositoryImplTest {
     @Test
     fun `currentUser returns auth currentUser`() {
         every { mockAuth.currentUser } returns mockUser
-        assertEquals(mockUser, repository.currentUser)
+        assertThat(repository.currentUser).isEqualTo(mockUser)
     }
 
     @Test
     fun `currentUser returns null when not authenticated`() {
         every { mockAuth.currentUser } returns null
-        assertNull(repository.currentUser)
+        assertThat(repository.currentUser).isNull()
     }
 
     @Test
@@ -61,8 +62,8 @@ class AuthRepositoryImplTest {
         val thrown = runCatching { repository.signInWithEmail("test@test.com", "wrong") }
             .exceptionOrNull()
 
-        assertTrue(thrown is AuthException)
-        assertEquals("操作失敗，請稍後再試", thrown?.message)
+        assertIs<AuthException>(thrown)
+        assertThat(thrown.message).isEqualTo("操作失敗，請稍後再試")
     }
 
     @Test
@@ -81,8 +82,8 @@ class AuthRepositoryImplTest {
 
         val thrown = runCatching { repository.signInAnonymously() }.exceptionOrNull()
 
-        assertTrue(thrown is AuthException)
-        assertEquals("操作失敗，請稍後再試", thrown?.message)
+        assertIs<AuthException>(thrown)
+        assertThat(thrown.message).isEqualTo("操作失敗，請稍後再試")
     }
 
     @Test
