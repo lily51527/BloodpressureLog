@@ -283,15 +283,7 @@ private fun TrendsLoadingPreview() {
 }
 
 @Composable
-private fun TrendRange.displayLabel(): String = when (this) {
-    TrendRange.DAYS_7 -> stringResource(R.string.trend_range_7_days)
-    TrendRange.DAYS_14 -> stringResource(R.string.trend_range_14_days)
-    TrendRange.DAYS_30 -> stringResource(R.string.trend_range_30_days)
-}
+private fun TrendRange.displayLabel(): String = stringResource(this.labelRes)
 
 @Composable
-private fun TrendMetric.displayLabel(): String = when (this) {
-    TrendMetric.SYSTOLIC -> stringResource(R.string.trend_metric_systolic)
-    TrendMetric.DIASTOLIC -> stringResource(R.string.trend_metric_diastolic)
-    TrendMetric.PULSE -> stringResource(R.string.trend_metric_pulse)
-}
+private fun TrendMetric.displayLabel(): String = stringResource(this.labelRes)
