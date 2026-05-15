@@ -66,6 +66,7 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.vico.compose.m3)
+    implementation(libs.kotlinx.coroutines.play.services)
     ksp(libs.hilt.compiler)
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
