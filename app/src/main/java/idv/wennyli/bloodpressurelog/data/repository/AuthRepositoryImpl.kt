@@ -1,6 +1,5 @@
 package idv.wennyli.bloodpressurelog.data.repository
 
-import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import idv.wennyli.bloodpressurelog.R
@@ -10,10 +9,8 @@ import idv.wennyli.bloodpressurelog.utils.toAuthErrorStringRes
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 class AuthRepositoryImpl @Inject constructor(
     private val auth: FirebaseAuth,
@@ -29,68 +26,50 @@ class AuthRepositoryImpl @Inject constructor(
         awaitClose { auth.removeAuthStateListener(listener) }
     }
 
-    override suspend fun signInWithEmail(email: String, password: String) =
-        suspendCancellableCoroutine<Unit> { continuation ->
-            auth.signInWithEmailAndPassword(email, password)
-                .addOnSuccessListener { continuation.resume(Unit) }
-                .addOnFailureListener { e ->
-                    continuation.resumeWithException(
-                        AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
-                    )
-                }
+    override suspend fun signInWithEmail(email: String, password: String) {
+        try {
+            auth.signInWithEmailAndPassword(email, password).await()
+        } catch (e: Exception) {
+            throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
+    }
 
-    override suspend fun signInAnonymously() =
-        suspendCancellableCoroutine<Unit> { continuation ->
-            auth.signInAnonymously()
-                .addOnSuccessListener { continuation.resume(Unit) }
-                .addOnFailureListener { e ->
-                    continuation.resumeWithException(
-                        AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
-                    )
-                }
+    override suspend fun signInAnonymously() {
+        try {
+            auth.signInAnonymously().await()
+        } catch (e: Exception) {
+            throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
+    }
 
     override suspend fun signOut() {
         auth.signOut()
     }
 
-    override suspend fun registerWithEmail(email: String, password: String) =
-        suspendCancellableCoroutine<Unit> { continuation ->
-            auth.createUserWithEmailAndPassword(email, password)
-                .addOnSuccessListener {
-                    auth.currentUser?.sendEmailVerification()
-                    continuation.resume(Unit)
-                }
-                .addOnFailureListener { e ->
-                    continuation.resumeWithException(
-                        AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
-                    )
-                }
+    override suspend fun registerWithEmail(email: String, password: String) {
+        try {
+            auth.createUserWithEmailAndPassword(email, password).await()
+            auth.currentUser?.sendEmailVerification()
+        } catch (e: Exception) {
+            throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
+    }
 
     override suspend fun sendEmailVerification() {
         val user = auth.currentUser
             ?: throw AuthException(resourceProvider.getString(R.string.error_auth_generic))
-        suspendCancellableCoroutine<Unit> { continuation ->
-            user.sendEmailVerification()
-                .addOnSuccessListener { continuation.resume(Unit) }
-                .addOnFailureListener { e ->
-                    continuation.resumeWithException(
-                        AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
-                    )
-                }
+        try {
+            user.sendEmailVerification().await()
+        } catch (e: Exception) {
+            throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
     }
 
-    override suspend fun sendPasswordResetEmail(email: String) =
-        suspendCancellableCoroutine<Unit> { continuation ->
-            auth.sendPasswordResetEmail(email)
-                .addOnSuccessListener { continuation.resume(Unit) }
-                .addOnFailureListener { e ->
-                    continuation.resumeWithException(
-                        AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
-                    )
-                }
+    override suspend fun sendPasswordResetEmail(email: String) {
+        try {
+            auth.sendPasswordResetEmail(email).await()
+        } catch (e: Exception) {
+            throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
+    }
 }

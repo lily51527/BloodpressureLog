@@ -4,8 +4,6 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import kotlin.test.assertIs
-import com.google.android.gms.tasks.OnFailureListener
-import com.google.android.gms.tasks.OnSuccessListener
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
@@ -187,21 +185,27 @@ class AuthRepositoryImplTest {
 
     // region helpers
 
+    // 模擬一個「已成功完成」的 Firebase Task。
+    // await() 進入時先檢查 isComplete（fast-path）：
+    //   isComplete=true  → 不掛起，直接同步回傳
+    //   exception=null   → 沒有例外，表示成功
+    //   isCanceled=false → 排除「Task 被取消」的情況，確認是真正成功
+    //   result=value     → await() 的回傳值
     @Suppress("UNCHECKED_CAST")
     private fun <T> buildSuccessTask(value: Any?): Task<T> = mockk<Task<T>>().apply {
-        every { addOnSuccessListener(any()) } answers {
-            (firstArg() as OnSuccessListener<Any?>).onSuccess(value)
-            this@apply
-        }
-        every { addOnFailureListener(any()) } returns this@apply
+        every { isComplete } returns true
+        every { isCanceled } returns false
+        every { exception } returns null
+        every { result } returns value as T?
     }
 
+    // 模擬一個「已失敗完成」的 Firebase Task。
+    // await() 進入時：
+    //   isComplete=true  → 不掛起，直接同步回傳
+    //   exception≠null   → 有例外，await() 直接拋出，不再檢查 isCanceled
     private fun <T> buildFailureTask(exception: Exception): Task<T> = mockk<Task<T>>().apply {
-        every { addOnSuccessListener(any()) } returns this@apply
-        every { addOnFailureListener(any()) } answers {
-            firstArg<OnFailureListener>().onFailure(exception)
-            this@apply
-        }
+        every { isComplete } returns true
+        every { this@apply.exception } returns exception
     }
 
     // endregion
