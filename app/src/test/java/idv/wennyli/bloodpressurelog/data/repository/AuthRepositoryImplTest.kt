@@ -82,6 +82,28 @@ class AuthRepositoryImplTest {
         verify { mockAuth.removeAuthStateListener(any()) }
     }
 
+    /** 連續多次認證狀態變化時，authStateChanges 應依序發射每一次狀態。 */
+    @Test
+    fun `authStateChanges emits multiple events in order`() = runTest {
+        every { mockAuth.addAuthStateListener(any()) } answers {
+            val authed = mockk<FirebaseAuth>()
+            every { authed.currentUser } returns mockUser
+            val signedOut = mockk<FirebaseAuth>()
+            every { signedOut.currentUser } returns null
+
+            val listener = firstArg<FirebaseAuth.AuthStateListener>()
+            listener.onAuthStateChanged(authed)
+            listener.onAuthStateChanged(signedOut)
+        }
+        every { mockAuth.removeAuthStateListener(any()) } just Runs
+
+        repository.authStateChanges.test {
+            assertThat(awaitItem()).isEqualTo(mockUser)
+            assertThat(awaitItem()).isNull()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
     /** Firebase 登入成功時，signInWithEmail 應正常完成而不拋出例外。 */
     @Test
     fun `signInWithEmail completes on Firebase success`() = runTest {
@@ -103,6 +125,20 @@ class AuthRepositoryImplTest {
 
         assertIs<AuthException>(thrown)
         assertThat(thrown.message).isEqualTo("操作失敗，請稍後再試")
+    }
+
+    /** Firebase 登入失敗時，signInWithEmail 拋出的 AuthException 應保留原始例外作為 cause。 */
+    @Test
+    fun `signInWithEmail preserves original exception as cause`() = runTest {
+        val original = RuntimeException("Invalid credentials")
+        val task = buildFailureTask<AuthResult>(original)
+        every { mockAuth.signInWithEmailAndPassword(any(), any()) } returns task
+
+        val thrown = runCatching { repository.signInWithEmail("test@test.com", "wrong") }
+            .exceptionOrNull()
+
+        assertIs<AuthException>(thrown)
+        assertThat(thrown.cause).isEqualTo(original)
     }
 
     /** Firebase 匿名登入成功時，signInAnonymously 應正常完成而不拋出例外。 */
@@ -148,6 +184,18 @@ class AuthRepositoryImplTest {
         repository.registerWithEmail("new@test.com", "password123")
 
         verify { mockUser.sendEmailVerification() }
+    }
+
+    /** 成功建立帳號但 currentUser 意外為 null 時，registerWithEmail 應靜默略過驗證信。 */
+    @Test
+    fun `registerWithEmail skips verification when currentUser is null after success`() = runTest {
+        val task = buildSuccessTask<AuthResult>(null)
+        every { mockAuth.createUserWithEmailAndPassword(any(), any()) } returns task
+        every { mockAuth.currentUser } returns null
+
+        repository.registerWithEmail("new@test.com", "password123")
+
+        verify(exactly = 0) { mockUser.sendEmailVerification() }
     }
 
     /** Firebase 註冊失敗時，registerWithEmail 應拋出含本地化訊息的 AuthException。 */
