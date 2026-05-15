@@ -11,7 +11,10 @@ import com.google.firebase.auth.FirebaseUser
 import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.data.model.AuthException
 import idv.wennyli.bloodpressurelog.utils.ResourceProvider
+import app.cash.turbine.test
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import kotlin.test.BeforeTest
@@ -43,6 +46,40 @@ class AuthRepositoryImplTest {
     fun `currentUser returns null when not authenticated`() {
         every { mockAuth.currentUser } returns null
         assertThat(repository.currentUser).isNull()
+    }
+
+    /** 認證狀態改變時，authStateChanges 應發射對應的使用者物件。 */
+    @Test
+    fun `authStateChanges emits user when auth state changes`() = runTest {
+        deliverAuthState(mockUser)
+
+        repository.authStateChanges.test {
+            assertThat(awaitItem()).isEqualTo(mockUser)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /** 登出時，authStateChanges 應發射 null。 */
+    @Test
+    fun `authStateChanges emits null when user signs out`() = runTest {
+        deliverAuthState(null)
+
+        repository.authStateChanges.test {
+            assertThat(awaitItem()).isNull()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /** Flow 被取消時，authStateChanges 應移除監聽器以避免資源洩漏。 */
+    @Test
+    fun `authStateChanges removes listener when flow is cancelled`() = runTest {
+        deliverAuthState(mockUser)
+
+        repository.authStateChanges.test {
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        verify { mockAuth.removeAuthStateListener(any()) }
     }
 
     /** Firebase 登入成功時，signInWithEmail 應正常完成而不拋出例外。 */
@@ -184,6 +221,17 @@ class AuthRepositoryImplTest {
     }
 
     // region helpers
+
+    // 讓 mockAuth.addAuthStateListener 立即觸發 listener，模擬 Firebase 回報指定的認證狀態。
+    // 同時 mock removeAuthStateListener，使 awaitClose 能正常執行而不拋出例外。
+    private fun deliverAuthState(user: FirebaseUser?) {
+        every { mockAuth.addAuthStateListener(any()) } answers {
+            val firebaseAuth = mockk<FirebaseAuth>()
+            every { firebaseAuth.currentUser } returns user
+            firstArg<FirebaseAuth.AuthStateListener>().onAuthStateChanged(firebaseAuth)
+        }
+        every { mockAuth.removeAuthStateListener(any()) } just Runs
+    }
 
     // 模擬一個「已成功完成」的 Firebase Task。
     // await() 進入時先檢查 isComplete（fast-path）：
