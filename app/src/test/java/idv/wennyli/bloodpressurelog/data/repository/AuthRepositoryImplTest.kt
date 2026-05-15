@@ -102,6 +102,89 @@ class AuthRepositoryImplTest {
         verify { mockAuth.signOut() }
     }
 
+    /** Firebase 註冊成功時，registerWithEmail 應正常完成，並對新使用者觸發寄送驗證信。 */
+    @Test
+    fun `registerWithEmail completes and sends verification email on Firebase success`() = runTest {
+        val task = buildSuccessTask<AuthResult>(null)
+        every { mockAuth.createUserWithEmailAndPassword(any(), any()) } returns task
+        every { mockAuth.currentUser } returns mockUser
+        every { mockUser.sendEmailVerification() } returns buildSuccessTask<Void>(null)
+
+        repository.registerWithEmail("new@test.com", "password123")
+
+        verify { mockUser.sendEmailVerification() }
+    }
+
+    /** Firebase 註冊失敗時，registerWithEmail 應拋出含本地化訊息的 AuthException。 */
+    @Test
+    fun `registerWithEmail throws AuthException with localized message on Firebase failure`() = runTest {
+        val exception = RuntimeException("Email already in use")
+        val task = buildFailureTask<AuthResult>(exception)
+        every { mockAuth.createUserWithEmailAndPassword(any(), any()) } returns task
+
+        val thrown = runCatching { repository.registerWithEmail("taken@test.com", "password123") }
+            .exceptionOrNull()
+
+        assertIs<AuthException>(thrown)
+        assertThat(thrown.message).isEqualTo("操作失敗，請稍後再試")
+    }
+
+    /** 已登入時，sendEmailVerification 應正常完成而不拋出例外。 */
+    @Test
+    fun `sendEmailVerification completes on Firebase success`() = runTest {
+        every { mockAuth.currentUser } returns mockUser
+        every { mockUser.sendEmailVerification() } returns buildSuccessTask<Void>(null)
+
+        repository.sendEmailVerification()
+    }
+
+    /** 未登入時，sendEmailVerification 應立即拋出 AuthException，不呼叫 Firebase。 */
+    @Test
+    fun `sendEmailVerification throws AuthException when user is null`() = runTest {
+        every { mockAuth.currentUser } returns null
+
+        val thrown = runCatching { repository.sendEmailVerification() }.exceptionOrNull()
+
+        assertIs<AuthException>(thrown)
+        assertThat(thrown.message).isEqualTo("操作失敗，請稍後再試")
+    }
+
+    /** Firebase 驗證信寄送失敗時，sendEmailVerification 應拋出含本地化訊息的 AuthException。 */
+    @Test
+    fun `sendEmailVerification throws AuthException with localized message on Firebase failure`() = runTest {
+        val exception = RuntimeException("Send email failed")
+        every { mockAuth.currentUser } returns mockUser
+        every { mockUser.sendEmailVerification() } returns buildFailureTask<Void>(exception)
+
+        val thrown = runCatching { repository.sendEmailVerification() }.exceptionOrNull()
+
+        assertIs<AuthException>(thrown)
+        assertThat(thrown.message).isEqualTo("操作失敗，請稍後再試")
+    }
+
+    /** Firebase 重設密碼信寄送成功時，sendPasswordResetEmail 應正常完成而不拋出例外。 */
+    @Test
+    fun `sendPasswordResetEmail completes on Firebase success`() = runTest {
+        val task = buildSuccessTask<Void>(null)
+        every { mockAuth.sendPasswordResetEmail(any()) } returns task
+
+        repository.sendPasswordResetEmail("user@test.com")
+    }
+
+    /** Firebase 重設密碼信寄送失敗時，sendPasswordResetEmail 應拋出含本地化訊息的 AuthException。 */
+    @Test
+    fun `sendPasswordResetEmail throws AuthException with localized message on Firebase failure`() = runTest {
+        val exception = RuntimeException("User not found")
+        val task = buildFailureTask<Void>(exception)
+        every { mockAuth.sendPasswordResetEmail(any()) } returns task
+
+        val thrown = runCatching { repository.sendPasswordResetEmail("nobody@test.com") }
+            .exceptionOrNull()
+
+        assertIs<AuthException>(thrown)
+        assertThat(thrown.message).isEqualTo("操作失敗，請稍後再試")
+    }
+
     // region helpers
 
     @Suppress("UNCHECKED_CAST")
