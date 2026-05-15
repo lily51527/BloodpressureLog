@@ -32,6 +32,7 @@ class ForgotPasswordViewModelTest {
         viewModel = ForgotPasswordViewModel(mockAuthRepository)
     }
 
+    /** 初始狀態下，email 應為空且不處於載入中、無錯誤、未寄出信件。 */
     @Test
     fun `initial state is empty and not loading`() {
         val state = viewModel.uiState.value
@@ -41,6 +42,7 @@ class ForgotPasswordViewModelTest {
         assertThat(state.isEmailSent).isFalse()
     }
 
+    /** 使用者修改 email 輸入時，應更新 email 值並清除先前的錯誤訊息。 */
     @Test
     fun `onEmailChange updates email and clears errorMessage`() {
         coEvery { mockAuthRepository.sendPasswordResetEmail(any()) } throws RuntimeException("err")
@@ -52,6 +54,7 @@ class ForgotPasswordViewModelTest {
         assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
+    /** 寄出重設密碼信成功後，應將 isEmailSent 設為 true 表示已寄出。 */
     @Test
     fun `sendResetEmail sets isEmailSent on success`() = runTest {
         coEvery { mockAuthRepository.sendPasswordResetEmail(any()) } just Runs
@@ -62,6 +65,7 @@ class ForgotPasswordViewModelTest {
         assertThat(viewModel.uiState.value.isEmailSent).isTrue()
     }
 
+    /** 寄出重設密碼信失敗時，應顯示錯誤訊息並清除載入狀態。 */
     @Test
     fun `sendResetEmail sets errorMessage and clears isLoading on failure`() = runTest {
         coEvery { mockAuthRepository.sendPasswordResetEmail(any()) } throws

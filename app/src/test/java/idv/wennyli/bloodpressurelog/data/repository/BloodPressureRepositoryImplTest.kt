@@ -56,6 +56,7 @@ class BloodPressureRepositoryImplTest {
 
     // region observeRecords
 
+    /** observeRecords 應先發射 Loading，再發射包含正確轉換紀錄的 Success。 */
     @Test
     fun `observeRecords emits Loading then Success with mapped records`() = runTest {
         val snapshot = mockk<QuerySnapshot>()
@@ -77,6 +78,7 @@ class BloodPressureRepositoryImplTest {
         }
     }
 
+    /** Firestore 快照為空時，observeRecords 應發射空列表的 Success 狀態。 */
     @Test
     fun `observeRecords emits Loading then empty Success when snapshot is empty`() = runTest {
         val snapshot = mockk<QuerySnapshot>()
@@ -92,6 +94,7 @@ class BloodPressureRepositoryImplTest {
         }
     }
 
+    /** 缺少必要欄位的 Firestore 文件，observeRecords 應略過並回傳空列表。 */
     @Test
     fun `observeRecords skips documents with missing required fields`() = runTest {
         val snapshot = mockk<QuerySnapshot>()
@@ -110,6 +113,7 @@ class BloodPressureRepositoryImplTest {
         }
     }
 
+    /** Firestore 發生錯誤時，observeRecords 應在 Loading 後發射 Error 狀態並附帶錯誤資訊。 */
     @Test
     fun `observeRecords emits Loading then Error on Firestore error`() = runTest {
         val exception = mockk<FirebaseFirestoreException>()
@@ -125,6 +129,7 @@ class BloodPressureRepositoryImplTest {
         }
     }
 
+    /** Flow 被取消時，observeRecords 應移除 Firestore 監聽器以避免資源洩漏。 */
     @Test
     fun `observeRecords removes listener when flow is cancelled`() = runTest {
         val snapshot = mockk<QuerySnapshot>()
@@ -140,6 +145,7 @@ class BloodPressureRepositoryImplTest {
         verify { mockListenerRegistration.remove() }
     }
 
+    /** observeRecords 應查詢正確的 Firestore 集合路徑以存取對應使用者的紀錄。 */
     @Test
     fun `observeRecords queries correct Firestore path`() = runTest {
         val snapshot = mockk<QuerySnapshot>()
@@ -157,6 +163,7 @@ class BloodPressureRepositoryImplTest {
 
     // region getRecord
 
+    /** 文件存在時，getRecord 應正確取得並回傳轉換後的血壓紀錄。 */
     @Test
     fun `getRecord returns record when document exists`() = runTest {
         val mockDoc = buildMockDocument("doc-1")
@@ -170,6 +177,7 @@ class BloodPressureRepositoryImplTest {
         assertThat(result?.diastolic).isEqualTo(80)
     }
 
+    /** 文件欄位不完整無法轉換時，getRecord 應回傳 null。 */
     @Test
     fun `getRecord returns null when document cannot be mapped`() = runTest {
         val invalidDoc = mockk<DocumentSnapshot>()
@@ -183,6 +191,7 @@ class BloodPressureRepositoryImplTest {
         assertThat(result).isNull()
     }
 
+    /** Firestore 讀取失敗時，getRecord 應拋出對應的例外。 */
     @Test
     fun `getRecord throws on Firestore failure`() = runTest {
         val exception = RuntimeException("get failed")
@@ -197,6 +206,7 @@ class BloodPressureRepositoryImplTest {
 
     // region addRecord
 
+    /** Firestore 新增成功時，addRecord 應正常完成而不拋出例外。 */
     @Test
     fun `addRecord completes on Firestore success`() = runTest {
         val task = buildSuccessTask<DocumentReference>(mockDocumentRef)
@@ -205,6 +215,7 @@ class BloodPressureRepositoryImplTest {
         repository.addRecord(sampleRecord())
     }
 
+    /** Firestore 新增失敗時，addRecord 應拋出對應的例外。 */
     @Test
     fun `addRecord throws on Firestore failure`() = runTest {
         val exception = RuntimeException("add failed")
@@ -219,6 +230,7 @@ class BloodPressureRepositoryImplTest {
 
     // region updateRecord
 
+    /** Firestore 更新成功時，updateRecord 應正常完成而不拋出例外。 */
     @Test
     fun `updateRecord completes on Firestore success`() = runTest {
         val task = buildSuccessTask<Void>(null)
@@ -227,6 +239,7 @@ class BloodPressureRepositoryImplTest {
         repository.updateRecord(sampleRecord(id = "doc-1"))
     }
 
+    /** Firestore 更新失敗時，updateRecord 應拋出對應的例外。 */
     @Test
     fun `updateRecord throws on Firestore failure`() = runTest {
         val exception = RuntimeException("update failed")
@@ -241,6 +254,7 @@ class BloodPressureRepositoryImplTest {
 
     // region unauthenticated
 
+    /** 使用者未登入時，observeRecords 應立即發射 Error 而非嘗試存取 Firestore。 */
     @Test
     fun `observeRecords emits Error immediately when user is null`() = runTest {
         every { mockAuth.currentUser } returns null
@@ -252,6 +266,7 @@ class BloodPressureRepositoryImplTest {
         }
     }
 
+    /** 使用者未登入時，getRecord 應拋出例外要求重新登入。 */
     @Test
     fun `getRecord throws when user is null`() = runTest {
         every { mockAuth.currentUser } returns null
@@ -260,6 +275,7 @@ class BloodPressureRepositoryImplTest {
         assertThat(thrown?.message).isEqualTo("請重新登入")
     }
 
+    /** 使用者未登入時，addRecord 應拋出例外要求重新登入。 */
     @Test
     fun `addRecord throws when user is null`() = runTest {
         every { mockAuth.currentUser } returns null
@@ -268,6 +284,7 @@ class BloodPressureRepositoryImplTest {
         assertThat(thrown?.message).isEqualTo("請重新登入")
     }
 
+    /** 使用者未登入時，updateRecord 應拋出例外要求重新登入。 */
     @Test
     fun `updateRecord throws when user is null`() = runTest {
         every { mockAuth.currentUser } returns null
@@ -276,6 +293,7 @@ class BloodPressureRepositoryImplTest {
         assertThat(thrown?.message).isEqualTo("請重新登入")
     }
 
+    /** 使用者未登入時，deleteRecord 應拋出例外要求重新登入。 */
     @Test
     fun `deleteRecord throws when user is null`() = runTest {
         every { mockAuth.currentUser } returns null
@@ -288,6 +306,7 @@ class BloodPressureRepositoryImplTest {
 
     // region deleteRecord
 
+    /** Firestore 刪除成功時，deleteRecord 應正常完成而不拋出例外。 */
     @Test
     fun `deleteRecord completes on Firestore success`() = runTest {
         val task = buildSuccessTask<Void>(null)
@@ -296,6 +315,7 @@ class BloodPressureRepositoryImplTest {
         repository.deleteRecord("doc-1")
     }
 
+    /** Firestore 刪除失敗時，deleteRecord 應拋出對應的例外。 */
     @Test
     fun `deleteRecord throws on Firestore failure`() = runTest {
         val exception = RuntimeException("delete failed")

@@ -32,6 +32,7 @@ class RegisterViewModelTest {
         viewModel = RegisterViewModel(mockAuthRepository)
     }
 
+    /** 初始狀態下，所有輸入欄位應為空且不處於載入中或有錯誤。 */
     @Test
     fun `initial state is empty and not loading`() {
         val state = viewModel.uiState.value
@@ -42,6 +43,7 @@ class RegisterViewModelTest {
         assertThat(state.errorMessage).isNull()
     }
 
+    /** 使用者修改 email 輸入時，應更新 email 值並清除先前的錯誤訊息。 */
     @Test
     fun `onEmailChange updates email and clears errorMessage`() {
         viewModel.onEmailChange("user@example.com")
@@ -49,6 +51,7 @@ class RegisterViewModelTest {
         assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
+    /** 使用者修改密碼輸入時，應更新 password 值並清除先前的錯誤訊息。 */
     @Test
     fun `onPasswordChange updates password and clears errorMessage`() {
         viewModel.onPasswordChange("secret123")
@@ -56,6 +59,7 @@ class RegisterViewModelTest {
         assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
+    /** 使用者修改確認密碼輸入時，應更新 confirmPassword 值並清除先前的錯誤訊息。 */
     @Test
     fun `onConfirmPasswordChange updates confirmPassword and clears errorMessage`() {
         viewModel.onConfirmPasswordChange("secret123")
@@ -63,6 +67,7 @@ class RegisterViewModelTest {
         assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
+    /** 兩次輸入的密碼不一致時，註冊應顯示錯誤訊息而不進行實際註冊。 */
     @Test
     fun `register sets errorMessage when passwords do not match`() {
         viewModel.onPasswordChange("abc123")
@@ -74,6 +79,7 @@ class RegisterViewModelTest {
         assertThat(viewModel.uiState.value.isLoading).isFalse()
     }
 
+    /** 註冊成功後，應發射導向 Email 驗證畫面的導航事件。 */
     @Test
     fun `register emits navigateToEmailVerification on success`() = runTest {
         viewModel.onPasswordChange("secret123")
@@ -87,6 +93,7 @@ class RegisterViewModelTest {
         }
     }
 
+    /** 註冊失敗時，應顯示錯誤訊息並清除載入狀態。 */
     @Test
     fun `register sets errorMessage and clears isLoading on failure`() = runTest {
         viewModel.onPasswordChange("secret123")

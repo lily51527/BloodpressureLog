@@ -54,6 +54,7 @@ class AddEditRecordViewModelTest {
 
     // ── Add mode ──
 
+    /** 新增模式下，初始狀態所有輸入欄位應為空且 isEditMode 為 false。 */
     @Test
     fun `add mode initial state has empty fields and isEditMode false`() {
         val viewModel = addModeViewModel()
@@ -68,6 +69,7 @@ class AddEditRecordViewModelTest {
         assertThat(state.errorMessage).isNull()
     }
 
+    /** 使用者修改收縮壓輸入時，應更新值並清除先前的錯誤訊息。 */
     @Test
     fun `onSystolicChange updates systolic and clears errorMessage`() {
         val viewModel = addModeViewModel()
@@ -76,6 +78,7 @@ class AddEditRecordViewModelTest {
         assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
+    /** 使用者修改舒張壓輸入時，應正確更新對應欄位值。 */
     @Test
     fun `onDiastolicChange updates diastolic`() {
         val viewModel = addModeViewModel()
@@ -83,6 +86,7 @@ class AddEditRecordViewModelTest {
         assertThat(viewModel.uiState.value.diastolic).isEqualTo("80")
     }
 
+    /** 使用者修改脈搏輸入時，應正確更新對應欄位值。 */
     @Test
     fun `onPulseChange updates pulse`() {
         val viewModel = addModeViewModel()
@@ -90,6 +94,7 @@ class AddEditRecordViewModelTest {
         assertThat(viewModel.uiState.value.pulse).isEqualTo("72")
     }
 
+    /** 使用者修改備註輸入時，應正確更新對應欄位值。 */
     @Test
     fun `onNoteChange updates note`() {
         val viewModel = addModeViewModel()
@@ -97,6 +102,7 @@ class AddEditRecordViewModelTest {
         assertThat(viewModel.uiState.value.note).isEqualTo("運動後")
     }
 
+    /** 使用者選擇記錄時間時，應正確更新 recordedAt 欄位。 */
     @Test
     fun `onRecordedAtChange updates recordedAt`() {
         val viewModel = addModeViewModel()
@@ -104,6 +110,7 @@ class AddEditRecordViewModelTest {
         assertThat(viewModel.uiState.value.recordedAt).isEqualTo(123456789L)
     }
 
+    /** 收縮壓輸入非數字時，儲存應顯示輸入無效的錯誤訊息。 */
     @Test
     fun `save with invalid systolic sets errorMessage`() {
         val viewModel = addModeViewModel()
@@ -116,6 +123,7 @@ class AddEditRecordViewModelTest {
         assertThat(viewModel.uiState.value.errorMessage).isEqualTo("請輸入有效的正整數數值")
     }
 
+    /** 收縮壓輸入為 0 時，儲存應顯示輸入無效的錯誤訊息。 */
     @Test
     fun `save with zero systolic sets errorMessage`() {
         val viewModel = addModeViewModel()
@@ -128,6 +136,7 @@ class AddEditRecordViewModelTest {
         assertThat(viewModel.uiState.value.errorMessage).isEqualTo("請輸入有效的正整數數值")
     }
 
+    /** 所有輸入欄位為空時，儲存應顯示輸入無效的錯誤訊息。 */
     @Test
     fun `save with empty fields sets errorMessage`() {
         val viewModel = addModeViewModel()
@@ -137,6 +146,7 @@ class AddEditRecordViewModelTest {
         assertThat(viewModel.uiState.value.errorMessage).isEqualTo("請輸入有效的正整數數值")
     }
 
+    /** 新增模式儲存成功後，應發射 savedSuccessfully 事件通知 UI 操作完成。 */
     @Test
     fun `save success in add mode emits savedSuccessfully`() = runTest {
         coEvery { mockRepository.addRecord(any()) } just Runs
@@ -152,6 +162,7 @@ class AddEditRecordViewModelTest {
         }
     }
 
+    /** 新增模式儲存失敗時，應顯示錯誤訊息並清除載入狀態。 */
     @Test
     fun `save error in add mode sets errorMessage`() = runTest {
         coEvery { mockRepository.addRecord(any()) } throws RuntimeException("Network error")
@@ -168,6 +179,7 @@ class AddEditRecordViewModelTest {
 
     // ── Edit mode ──
 
+    /** 編輯模式啟動時，應從 Repository 載入紀錄並填入所有欄位。 */
     @Test
     fun `edit mode loads record from repository`() = runTest {
         val record = BloodPressureRecord(
@@ -194,6 +206,7 @@ class AddEditRecordViewModelTest {
         assertThat(state.isLoading).isFalse()
     }
 
+    /** 編輯模式找不到指定紀錄時，應顯示找不到紀錄的錯誤訊息。 */
     @Test
     fun `edit mode shows error when record is not found`() = runTest {
         coEvery { mockRepository.getRecord("missing-id") } returns null
@@ -205,6 +218,7 @@ class AddEditRecordViewModelTest {
         assertThat(state.isLoading).isFalse()
     }
 
+    /** 編輯模式讀取紀錄失敗時，應顯示對應的錯誤訊息。 */
     @Test
     fun `edit mode shows error when getRecord fails`() = runTest {
         coEvery { mockRepository.getRecord("record-1") } throws RuntimeException("Network error")
@@ -216,6 +230,7 @@ class AddEditRecordViewModelTest {
         assertThat(state.isLoading).isFalse()
     }
 
+    /** 編輯模式儲存時，應保留原始 createdAt 並呼叫 updateRecord 更新紀錄。 */
     @Test
     fun `save in edit mode calls updateRecord with preserved createdAt`() = runTest {
         val record = BloodPressureRecord(
@@ -240,6 +255,7 @@ class AddEditRecordViewModelTest {
         }
     }
 
+    /** 編輯模式儲存成功後，應發射 savedSuccessfully 事件通知 UI 操作完成。 */
     @Test
     fun `save success in edit mode emits savedSuccessfully`() = runTest {
         val record = BloodPressureRecord(

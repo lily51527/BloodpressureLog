@@ -15,24 +15,28 @@ class DateUtilsTest {
             .toInstant()
             .toEpochMilli()
 
+    /** formatDate 應將毫秒時間戳記格式化為 yyyy/MM/dd 的日期字串。 */
     @Test
     fun `formatDate returns yyyy slash MM slash dd`() {
         val epoch = epochOf(2024, 3, 15, 10, 30)
         assertThat(DateUtils.formatDate(epoch)).isEqualTo("2024/03/15")
     }
 
+    /** formatTime 應將毫秒時間戳記格式化為 HH:mm 的時間字串。 */
     @Test
     fun `formatTime returns HH colon mm`() {
         val epoch = epochOf(2024, 3, 15, 9, 5)
         assertThat(DateUtils.formatTime(epoch)).isEqualTo("09:05")
     }
 
+    /** formatDateTime 應將毫秒時間戳記格式化為日期與時間合併的字串。 */
     @Test
     fun `formatDateTime returns date and time combined`() {
         val epoch = epochOf(2024, 3, 15, 9, 5)
         assertThat(DateUtils.formatDateTime(epoch)).isEqualTo("2024/03/15 09:05")
     }
 
+    /** combineDateAndTime 應將 UTC 午夜日期與本地時間組合成正確的日期時間。 */
     @Test
     fun `combineDateAndTime combines UTC midnight date with local hour and minute`() {
         val utcMidnight = LocalDateTime.of(2024, 3, 15, 0, 0)
@@ -45,6 +49,7 @@ class DateUtilsTest {
         assertThat(DateUtils.formatTime(result)).isEqualTo("14:30")
     }
 
+    /** toUtcMidnightMillis 與 combineDateAndTime 往返轉換後，日期與時間應與原始值一致。 */
     @Test
     fun `toUtcMidnightMillis and combineDateAndTime round-trip preserves date`() {
         val original = epochOf(2024, 6, 20, 22, 45)

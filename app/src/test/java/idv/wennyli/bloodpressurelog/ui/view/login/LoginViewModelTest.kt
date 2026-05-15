@@ -34,6 +34,7 @@ class LoginViewModelTest {
         viewModel = LoginViewModel(mockAuthRepository)
     }
 
+    /** 初始狀態下，email 和 password 應為空且不處於載入中或有錯誤。 */
     @Test
     fun `initial state is empty and not loading`() {
         val state = viewModel.uiState.value
@@ -43,6 +44,7 @@ class LoginViewModelTest {
         assertThat(state.errorMessage).isNull()
     }
 
+    /** 使用者修改 email 輸入時，應更新 email 值並清除先前的錯誤訊息。 */
     @Test
     fun `onEmailChange updates email and clears errorMessage`() {
         viewModel.onEmailChange("user@example.com")
@@ -50,6 +52,7 @@ class LoginViewModelTest {
         assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
+    /** 使用者修改密碼輸入時，應更新 password 值並清除先前的錯誤訊息。 */
     @Test
     fun `onPasswordChange updates password and clears errorMessage`() {
         viewModel.onPasswordChange("secret123")
@@ -57,6 +60,7 @@ class LoginViewModelTest {
         assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
+    /** Email 已驗證的使用者登入成功後，應導向主畫面。 */
     @Test
     fun `signInWithEmail emits navigateToMain when email is verified`() = runTest {
         val mockUser = mockk<FirebaseUser>()
@@ -71,6 +75,7 @@ class LoginViewModelTest {
         }
     }
 
+    /** Email 尚未驗證的使用者登入後，應導向 Email 驗證畫面。 */
     @Test
     fun `signInWithEmail emits navigateToEmailVerification when email is not verified`() = runTest {
         val mockUser = mockk<FirebaseUser>()
@@ -85,6 +90,7 @@ class LoginViewModelTest {
         }
     }
 
+    /** Email 登入失敗時，應顯示錯誤訊息並清除載入狀態。 */
     @Test
     fun `signInWithEmail sets errorMessage and clears isLoading on failure`() = runTest {
         coEvery { mockAuthRepository.signInWithEmail(any(), any()) } throws
@@ -97,6 +103,7 @@ class LoginViewModelTest {
         assertThat(state.errorMessage).isEqualTo("Bad credentials")
     }
 
+    /** 匿名登入成功後，應發射導向主畫面的導航事件。 */
     @Test
     fun `signInAnonymously emits navigateToMain on success`() = runTest {
         coEvery { mockAuthRepository.signInAnonymously() } just Runs
@@ -108,6 +115,7 @@ class LoginViewModelTest {
         }
     }
 
+    /** 匿名登入失敗時，應顯示錯誤訊息並清除載入狀態。 */
     @Test
     fun `signInAnonymously sets errorMessage and clears isLoading on failure`() = runTest {
         coEvery { mockAuthRepository.signInAnonymously() } throws RuntimeException("Failed")
@@ -119,6 +127,7 @@ class LoginViewModelTest {
         assertThat(state.errorMessage).isEqualTo("Failed")
     }
 
+    /** 呼叫 clearError 後，errorMessage 應被清除為 null。 */
     @Test
     fun `clearError resets errorMessage`() = runTest {
         coEvery { mockAuthRepository.signInWithEmail(any(), any()) } throws RuntimeException("err")

@@ -41,6 +41,7 @@ class EmailVerificationViewModelTest {
         viewModel = EmailVerificationViewModel(mockAuthRepository)
     }
 
+    /** 初始狀態下，冷卻倒數應已啟動且不應處於載入中或有錯誤訊息。 */
     @Test
     fun `initial state starts with cooldown active`() {
         assertThat(viewModel.uiState.value.resendCooldownSeconds).isEqualTo(
@@ -50,6 +51,7 @@ class EmailVerificationViewModelTest {
         assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
+    /** 初始狀態的 email 欄位應顯示目前登入使用者的 email 位址。 */
     @Test
     fun `initial state has email from currentUser`() {
         val mockUser = mockk<FirebaseUser>()
@@ -59,12 +61,14 @@ class EmailVerificationViewModelTest {
         assertThat(vm.uiState.value.email).isEqualTo("user@example.com")
     }
 
+    /** 冷卻期間呼叫重新發送，應不觸發實際寄信以防止濫用。 */
     @Test
     fun `resendVerificationEmail is ignored during initial cooldown`() = runTest(testDispatcher) {
         viewModel.resendVerificationEmail()
         coVerify(exactly = 0) { mockAuthRepository.sendEmailVerification() }
     }
 
+    /** 冷卻時間結束後，重新發送驗證信應成功並重置冷卻倒數。 */
     @Test
     fun `resendVerificationEmail succeeds after initial cooldown expires`() =
         runTest(testDispatcher) {
@@ -79,6 +83,7 @@ class EmailVerificationViewModelTest {
             )
         }
 
+    /** 重新發送後，冷卻倒數應在時間到期後歸零。 */
     @Test
     fun `resendVerificationEmail cooldown counts down to zero after resend`() =
         runTest(testDispatcher) {
@@ -91,6 +96,7 @@ class EmailVerificationViewModelTest {
             assertThat(viewModel.uiState.value.resendCooldownSeconds).isEqualTo(0)
         }
 
+    /** 重新發送驗證信失敗時，應顯示錯誤訊息且不再處於載入中狀態。 */
     @Test
     fun `resendVerificationEmail sets errorMessage on failure`() = runTest(testDispatcher) {
         coEvery { mockAuthRepository.sendEmailVerification() } throws
@@ -103,6 +109,7 @@ class EmailVerificationViewModelTest {
         assertThat(viewModel.uiState.value.errorMessage).isEqualTo("Too many requests")
     }
 
+    /** 返回登入頁時，應先登出並發射導航事件。 */
     @Test
     fun `backToLogin calls signOut and emits navigateToLogin`() = runTest(testDispatcher) {
         coEvery { mockAuthRepository.signOut() } returns Unit

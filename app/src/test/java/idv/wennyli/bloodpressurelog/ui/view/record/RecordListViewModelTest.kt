@@ -53,6 +53,7 @@ class RecordListViewModelTest {
         viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
     }
 
+    /** 初始狀態下，應顯示載入中且紀錄列表為空。 */
     @Test
     fun `initial state has isLoading true and empty records`() {
         val state = viewModel.uiState.value
@@ -61,6 +62,7 @@ class RecordListViewModelTest {
         assertThat(state.errorMessage).isNull()
     }
 
+    /** 成功取得紀錄後，列表應依記錄時間降冪排序顯示。 */
     @Test
     fun `success state populates records sorted by recordedAt descending`() {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(sampleRecords))
@@ -73,6 +75,7 @@ class RecordListViewModelTest {
         assertThat(state.records.map { it.id }).containsExactly("1", "3", "2")
     }
 
+    /** 取得紀錄失敗時，應顯示錯誤訊息並清除載入狀態。 */
     @Test
     fun `error state sets errorMessage and clears isLoading`() {
         val error = RuntimeException("Firestore error")
@@ -85,6 +88,7 @@ class RecordListViewModelTest {
         assertThat(state.errorMessage).isEqualTo("Firestore error")
     }
 
+    /** 資料載入中時，isLoading 應為 true 以顯示載入指示器。 */
     @Test
     fun `loading state sets isLoading true`() {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Loading)
@@ -94,6 +98,7 @@ class RecordListViewModelTest {
         assertThat(viewModel.uiState.value.isLoading).isTrue()
     }
 
+    /** 點擊新增按鈕時，應發射 null 導航事件以開啟新增紀錄畫面。 */
     @Test
     fun `onAddRecord emits null to navigateToAddEdit`() = runTest {
         viewModel.navigateToAddEdit.test {
@@ -103,6 +108,7 @@ class RecordListViewModelTest {
         }
     }
 
+    /** 點擊編輯按鈕時，應發射對應 recordId 的導航事件以開啟編輯畫面。 */
     @Test
     fun `onEditRecord emits recordId to navigateToAddEdit`() = runTest {
         viewModel.navigateToAddEdit.test {
@@ -112,6 +118,7 @@ class RecordListViewModelTest {
         }
     }
 
+    /** 刪除紀錄時，應以正確的 id 呼叫 Repository 的 deleteRecord。 */
     @Test
     fun `deleteRecord calls repository deleteRecord with correct id`() = runTest {
         coEvery { mockRepository.deleteRecord(any()) } just Runs
@@ -121,6 +128,7 @@ class RecordListViewModelTest {
         coVerify { mockRepository.deleteRecord("record-456") }
     }
 
+    /** 刪除紀錄失敗時，應顯示刪除失敗的錯誤訊息。 */
     @Test
     fun `deleteRecord sets errorMessage on failure`() = runTest {
         coEvery { mockRepository.deleteRecord(any()) } throws RuntimeException("Firestore error")
@@ -130,6 +138,7 @@ class RecordListViewModelTest {
         assertThat(viewModel.uiState.value.errorMessage).isEqualTo("刪除失敗，請稍後再試")
     }
 
+    /** 刪除紀錄成功時，不應顯示任何錯誤訊息。 */
     @Test
     fun `deleteRecord does not set errorMessage on success`() = runTest {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(emptyList()))
@@ -141,6 +150,7 @@ class RecordListViewModelTest {
         assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
+    /** 使用者登出時，應呼叫 AuthRepository 的 signOut 完成登出流程。 */
     @Test
     fun `signOut calls authRepository signOut`() = runTest {
         coEvery { mockAuthRepository.signOut() } just Runs
@@ -150,6 +160,7 @@ class RecordListViewModelTest {
         coVerify { mockAuthRepository.signOut() }
     }
 
+    /** 取得空列表時，應顯示無資料的空狀態而非載入中或錯誤。 */
     @Test
     fun `success with empty list shows empty state`() {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(emptyList()))

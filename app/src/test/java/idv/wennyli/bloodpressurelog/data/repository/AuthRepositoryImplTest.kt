@@ -33,18 +33,21 @@ class AuthRepositoryImplTest {
         repository = AuthRepositoryImpl(mockAuth, mockResourceProvider)
     }
 
+    /** currentUser 應返回 FirebaseAuth 目前登入的使用者物件。 */
     @Test
     fun `currentUser returns auth currentUser`() {
         every { mockAuth.currentUser } returns mockUser
         assertThat(repository.currentUser).isEqualTo(mockUser)
     }
 
+    /** 未登入時，currentUser 應返回 null。 */
     @Test
     fun `currentUser returns null when not authenticated`() {
         every { mockAuth.currentUser } returns null
         assertThat(repository.currentUser).isNull()
     }
 
+    /** Firebase 登入成功時，signInWithEmail 應正常完成而不拋出例外。 */
     @Test
     fun `signInWithEmail completes on Firebase success`() = runTest {
         val task = buildSuccessTask<AuthResult>(null)
@@ -53,6 +56,7 @@ class AuthRepositoryImplTest {
         repository.signInWithEmail("test@test.com", "password")
     }
 
+    /** Firebase 登入失敗時，signInWithEmail 應拋出含本地化訊息的 AuthException。 */
     @Test
     fun `signInWithEmail throws AuthException with localized message on Firebase failure`() = runTest {
         val exception = RuntimeException("Invalid credentials")
@@ -66,6 +70,7 @@ class AuthRepositoryImplTest {
         assertThat(thrown.message).isEqualTo("操作失敗，請稍後再試")
     }
 
+    /** Firebase 匿名登入成功時，signInAnonymously 應正常完成而不拋出例外。 */
     @Test
     fun `signInAnonymously completes on Firebase success`() = runTest {
         val task = buildSuccessTask<AuthResult>(null)
@@ -74,6 +79,7 @@ class AuthRepositoryImplTest {
         repository.signInAnonymously()
     }
 
+    /** Firebase 匿名登入失敗時，signInAnonymously 應拋出含本地化訊息的 AuthException。 */
     @Test
     fun `signInAnonymously throws AuthException with localized message on Firebase failure`() = runTest {
         val exception = RuntimeException("Anonymous sign in failed")
@@ -86,6 +92,7 @@ class AuthRepositoryImplTest {
         assertThat(thrown.message).isEqualTo("操作失敗，請稍後再試")
     }
 
+    /** signOut 應呼叫 FirebaseAuth 的 signOut，確保使用者登出。 */
     @Test
     fun `signOut calls auth signOut`() = runTest {
         every { mockAuth.signOut() } returns Unit
