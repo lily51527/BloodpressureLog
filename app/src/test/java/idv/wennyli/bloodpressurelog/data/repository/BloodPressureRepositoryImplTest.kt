@@ -92,6 +92,30 @@ class BloodPressureRepositoryImplTest {
         }
     }
 
+    /** snapshot 含多筆有效文件時，observeRecords 應發射包含所有文件的 Success。 */
+    @Test
+    fun `observeRecords emits Success with all records when snapshot has multiple documents`() = runTest {
+        val snapshot = mockk<QuerySnapshot>()
+        every { snapshot.documents } returns listOf(
+            buildMockDocument("doc-1"),
+            buildMockDocument("doc-2"),
+            buildMockDocument("doc-3"),
+        )
+        deliverSnapshot(snapshot, null)
+
+        repository.observeRecords().test {
+            assertThat(awaitItem()).isInstanceOf(DataState.Loading::class)
+            val success = awaitItem() as DataState.Success<*>
+            @Suppress("UNCHECKED_CAST")
+            val records = success.data as List<BloodPressureRecord>
+            assertThat(records).hasSize(3)
+            assertThat(records[0].id).isEqualTo("doc-1")
+            assertThat(records[1].id).isEqualTo("doc-2")
+            assertThat(records[2].id).isEqualTo("doc-3")
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
     /** 缺少必要欄位的 Firestore 文件，observeRecords 應略過並回傳空列表。 */
     @Test
     fun `observeRecords skips documents with missing required fields`() = runTest {
@@ -107,6 +131,32 @@ class BloodPressureRepositoryImplTest {
             val success = awaitItem() as DataState.Success<*>
             @Suppress("UNCHECKED_CAST")
             assertThat(success.data as List<*>).isEmpty()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /** 有效與無效文件混合時，observeRecords 應只保留能正確轉換的文件。 */
+    @Test
+    fun `observeRecords includes only valid documents when mixed with invalid ones`() = runTest {
+        val invalidDoc = mockk<DocumentSnapshot>()
+        every { invalidDoc.id } returns "invalid"
+        every { invalidDoc.getLong("systolic") } returns null
+        val snapshot = mockk<QuerySnapshot>()
+        every { snapshot.documents } returns listOf(
+            buildMockDocument("doc-1"),
+            invalidDoc,
+            buildMockDocument("doc-2"),
+        )
+        deliverSnapshot(snapshot, null)
+
+        repository.observeRecords().test {
+            assertThat(awaitItem()).isInstanceOf(DataState.Loading::class)
+            val success = awaitItem() as DataState.Success<*>
+            @Suppress("UNCHECKED_CAST")
+            val records = success.data as List<BloodPressureRecord>
+            assertThat(records).hasSize(2)
+            assertThat(records[0].id).isEqualTo("doc-1")
+            assertThat(records[1].id).isEqualTo("doc-2")
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -155,6 +205,31 @@ class BloodPressureRepositoryImplTest {
         }
 
         verify { mockFirestore.collection("artifacts/bloodpressurelog_debug/users/uid-123/bloodPressures") }
+    }
+
+    /** Firestore 連續推送兩次 snapshot 時，observeRecords 應依序發射對應的兩次 Success。 */
+    @Test
+    fun `observeRecords emits updated list when Firestore pushes a second snapshot`() = runTest {
+        val snapshot1 = mockk<QuerySnapshot>()
+        every { snapshot1.documents } returns listOf(buildMockDocument("doc-1"))
+        val snapshot2 = mockk<QuerySnapshot>()
+        every { snapshot2.documents } returns listOf(buildMockDocument("doc-1"), buildMockDocument("doc-2"))
+
+        every { mockQuery.addSnapshotListener(any<EventListener<QuerySnapshot>>()) } answers {
+            val listener = firstArg<EventListener<QuerySnapshot>>()
+            listener.onEvent(snapshot1, null)
+            listener.onEvent(snapshot2, null)
+            mockListenerRegistration
+        }
+
+        repository.observeRecords().test {
+            assertThat(awaitItem()).isInstanceOf(DataState.Loading::class)
+            @Suppress("UNCHECKED_CAST")
+            assertThat((awaitItem() as DataState.Success<*>).data as List<*>).hasSize(1)
+            @Suppress("UNCHECKED_CAST")
+            assertThat((awaitItem() as DataState.Success<*>).data as List<*>).hasSize(2)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
     // endregion
