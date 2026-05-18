@@ -67,7 +67,7 @@ class BuildChartDataUseCaseTest {
         assertThat(points).hasSize(1)
     }
 
-    /** 同一天有多筆紀錄時，應合併為單一資料點並取平均值（120 + 140) / 2 = 130）。 */
+    /** 同一天有多筆紀錄時，應合併為單一資料點並取平均值（120 + 140) / 2 = 130。 */
     @Test
     fun `daily average is correct for multiple records on same day`() {
         val today = LocalDate.now()
@@ -140,5 +140,40 @@ class BuildChartDataUseCaseTest {
         val (points, _) = useCase(records, TrendRange.DAYS_14, TrendMetric.SYSTOLIC)
 
         assertThat(points).hasSize(2)
+    }
+
+    /**
+     * startDate 當天（邊界首日）的紀錄應被納入；startDate 前一天的紀錄應被排除。
+     * 以 DAYS_7 為例：startDate = today.minusDays(6)，minusDays(7) 超出範圍。
+     */
+    @Test
+    fun `record on startDate is included and record before startDate is excluded`() {
+        val today = LocalDate.now()
+        val startDate = today.minusDays((TrendRange.DAYS_7.days - 1).toLong())
+        val records = listOf(
+            record(120, 80, 70, startDate),
+            record(130, 85, 72, startDate.minusDays(1)),
+        )
+
+        val (points, _) = useCase(records, TrendRange.DAYS_7, TrendMetric.SYSTOLIC)
+
+        assertThat(points).hasSize(1)
+        assertThat(points[0].second).isEqualTo(120f)
+    }
+
+    /**
+     * xLabels 的每個元素格式應符合 "M/d"（例如 "5/18"），且不得為空白。
+     * Vico 的 CartesianValueFormatter 若回傳空白字串會拋出 IllegalStateException。
+     */
+    @Test
+    fun `xLabels have correct format and are not blank`() {
+        val today = LocalDate.now()
+        val startDate = today.minusDays((TrendRange.DAYS_7.days - 1).toLong())
+
+        val (_, labels) = useCase(emptyList(), TrendRange.DAYS_7, TrendMetric.SYSTOLIC)
+
+        assertThat(labels.first()).isEqualTo("${startDate.monthValue}/${startDate.dayOfMonth}")
+        assertThat(labels.last()).isEqualTo("${today.monthValue}/${today.dayOfMonth}")
+        assertThat(labels.none { it.isBlank() }).isEqualTo(true)
     }
 }
