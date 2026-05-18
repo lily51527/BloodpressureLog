@@ -36,7 +36,7 @@ class BuildChartDataUseCase @Inject constructor() {
         range: TrendRange,
         metric: TrendMetric,
     ): Pair<List<Pair<Float, Float>>, List<String>> {
-        val zone = ZoneId.systemDefault()
+        val zone = ZoneId.systemDefault() //時區
         val today = LocalDate.now(zone)
         val startDate = today.minusDays((range.days - 1).toLong())
         val formatter = DateTimeFormatter.ofPattern("M/d")
@@ -46,7 +46,7 @@ class BuildChartDataUseCase @Inject constructor() {
         }
 
         val byDay = records
-            .groupBy { Instant.ofEpochMilli(it.recordedAt).atZone(zone).toLocalDate() }
+            .groupBy { Instant.ofEpochMilli(it.recordedAt).atZone(zone).toLocalDate() } // 把 records 這個 List 按「同一天」分組，結果是一個 Map<LocalDate, List<BloodPressureRecord>>
             .filterKeys { date -> !date.isBefore(startDate) && !date.isAfter(today) }
 
         val points = byDay.entries
