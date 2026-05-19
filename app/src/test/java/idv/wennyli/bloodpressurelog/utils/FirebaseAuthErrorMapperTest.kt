@@ -102,6 +102,42 @@ class FirebaseAuthErrorMapperTest {
         assertThat(e.toAuthErrorStringRes()).isEqualTo(R.string.error_auth_generic)
     }
 
+    /** errorCode 為空字串的 FirebaseAuthException 應落到 else 分支，回傳通用錯誤字串資源。 */
+    @Test
+    fun `maps FirebaseAuthException with empty errorCode to generic error string res`() {
+        val e = mockFirebaseAuthException("")
+
+        val result = e.toAuthErrorStringRes()
+
+        assertThat(result).isEqualTo(R.string.error_auth_generic)
+    }
+
+    /**
+     * errorCode 為小寫的 FirebaseAuthException 應落到 else 分支，驗證 when 比對為大小寫敏感，
+     * 回傳通用錯誤字串資源。
+     */
+    @Test
+    fun `maps FirebaseAuthException with lowercase errorCode to generic error string res`() {
+        val e = mockFirebaseAuthException("error_invalid_credential")
+
+        val result = e.toAuthErrorStringRes()
+
+        assertThat(result).isEqualTo(R.string.error_auth_generic)
+    }
+
+    /**
+     * errorCode 含前後空白的 FirebaseAuthException 應落到 else 分支（不做 trim），
+     * 回傳通用錯誤字串資源。
+     */
+    @Test
+    fun `maps FirebaseAuthException with whitespace-padded errorCode to generic error string res`() {
+        val e = mockFirebaseAuthException(" ERROR_INVALID_CREDENTIAL ")
+
+        val result = e.toAuthErrorStringRes()
+
+        assertThat(result).isEqualTo(R.string.error_auth_generic)
+    }
+
     private fun mockFirebaseAuthException(errorCode: String): FirebaseAuthException =
         mockk<FirebaseAuthException>().also { every { it.errorCode } returns errorCode }
 }
