@@ -3,6 +3,7 @@ package idv.wennyli.bloodpressurelog.utils
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import kotlin.test.Test
+import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -47,6 +48,41 @@ class DateUtilsTest {
 
         assertThat(DateUtils.formatDate(result)).isEqualTo("2024/03/15")
         assertThat(DateUtils.formatTime(result)).isEqualTo("14:30")
+    }
+
+    /**
+     * toUtcMidnightMillis 回傳的毫秒值，以 UTC 時區解析後，小時與分鐘應為 0，
+     * 且日期應與輸入本地時間的日期一致。
+     */
+    @Test
+    fun `toUtcMidnightMillis returns UTC midnight of the local date`() {
+        val epoch = epochOf(2024, 3, 15, 22, 45)
+
+        val utcMidnight = DateUtils.toUtcMidnightMillis(epoch)
+
+        val zoned = Instant.ofEpochMilli(utcMidnight).atZone(ZoneOffset.UTC)
+        assertThat(zoned.hour).isEqualTo(0)
+        assertThat(zoned.minute).isEqualTo(0)
+        assertThat(zoned.second).isEqualTo(0)
+        assertThat(zoned.year).isEqualTo(2024)
+        assertThat(zoned.monthValue).isEqualTo(3)
+        assertThat(zoned.dayOfMonth).isEqualTo(15)
+    }
+
+    /** combineDateAndTime 在邊界時間（00:00 與 23:59）時應正確格式化，不發生日期偏移。 */
+    @Test
+    fun `combineDateAndTime with boundary hours returns correct time`() {
+        val utcMidnight = LocalDateTime.of(2024, 3, 15, 0, 0)
+            .toInstant(ZoneOffset.UTC)
+            .toEpochMilli()
+
+        val midnight = DateUtils.combineDateAndTime(utcMidnight, hour = 0, minute = 0)
+        val endOfDay = DateUtils.combineDateAndTime(utcMidnight, hour = 23, minute = 59)
+
+        assertThat(DateUtils.formatDate(midnight)).isEqualTo("2024/03/15")
+        assertThat(DateUtils.formatTime(midnight)).isEqualTo("00:00")
+        assertThat(DateUtils.formatDate(endOfDay)).isEqualTo("2024/03/15")
+        assertThat(DateUtils.formatTime(endOfDay)).isEqualTo("23:59")
     }
 
     /** toUtcMidnightMillis 與 combineDateAndTime 往返轉換後，日期與時間應與原始值一致。 */
