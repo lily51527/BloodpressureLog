@@ -61,4 +61,82 @@ class BloodPressureLevelTest {
     fun `high stage 2 takes precedence over stage 1 boundary`() {
         assertThat(bloodPressureLevel(140, 90)).isEqualTo(BloodPressureLevel.HIGH_STAGE_2)
     }
+
+    // ── 邊界精確值 ────────────────────────────────────────────────────────────
+
+    /** systolic=139 剛好不到第二期門檻（140），舒張壓也未達 80，應為第一期高血壓。 */
+    @Test
+    fun `high stage 1 when systolic is 139 and diastolic is 79`() {
+        val result = bloodPressureLevel(139, 79)
+
+        assertThat(result).isEqualTo(BloodPressureLevel.HIGH_STAGE_1)
+    }
+
+    /** systolic=140 剛好跨過第二期收縮壓門檻，應為第二期高血壓。 */
+    @Test
+    fun `high stage 2 when systolic is exactly 140 and diastolic is 79`() {
+        val result = bloodPressureLevel(140, 79)
+
+        assertThat(result).isEqualTo(BloodPressureLevel.HIGH_STAGE_2)
+    }
+
+    /** diastolic=89 剛好不到第二期門檻（90），收縮壓也未達 120，應為第一期高血壓。 */
+    @Test
+    fun `high stage 1 when diastolic is 89 and systolic is 119`() {
+        val result = bloodPressureLevel(119, 89)
+
+        assertThat(result).isEqualTo(BloodPressureLevel.HIGH_STAGE_1)
+    }
+
+    /** diastolic=90 剛好跨過第二期舒張壓門檻，應為第二期高血壓。 */
+    @Test
+    fun `high stage 2 when diastolic is exactly 90 and systolic is 119`() {
+        val result = bloodPressureLevel(119, 90)
+
+        assertThat(result).isEqualTo(BloodPressureLevel.HIGH_STAGE_2)
+    }
+
+    // ── 只有一側條件達標（優先級組合） ─────────────────────────────────────────
+
+    /** 舒張壓達 90 但收縮壓僅 139（未達第二期），OR 邏輯應以舒張壓達標為準，回傳第二期高血壓。 */
+    @Test
+    fun `high stage 2 when only diastolic meets stage 2 threshold`() {
+        val result = bloodPressureLevel(139, 90)
+
+        assertThat(result).isEqualTo(BloodPressureLevel.HIGH_STAGE_2)
+    }
+
+    // ── 無效／極端輸入（記錄實際行為） ──────────────────────────────────────────
+
+    /** systolic=0、diastolic=0 不滿足任何高血壓條件，實際回傳 NORMAL。 */
+    @Test
+    fun `returns normal when both systolic and diastolic are zero`() {
+        val result = bloodPressureLevel(0, 0)
+
+        assertThat(result).isEqualTo(BloodPressureLevel.NORMAL)
+    }
+
+    /** systolic=-1、diastolic=-1 不滿足任何高血壓條件，實際回傳 NORMAL。 */
+    @Test
+    fun `returns normal when both systolic and diastolic are negative`() {
+        val result = bloodPressureLevel(-1, -1)
+
+        assertThat(result).isEqualTo(BloodPressureLevel.NORMAL)
+    }
+
+    /** systolic=999、diastolic=999 超過所有門檻，應落入最高等級第二期高血壓。 */
+    @Test
+    fun `high stage 2 when both values are extremely large`() {
+        val result = bloodPressureLevel(999, 999)
+
+        assertThat(result).isEqualTo(BloodPressureLevel.HIGH_STAGE_2)
+    }
+
+    /** systolic=Int.MAX_VALUE、diastolic=Int.MAX_VALUE 為整數最大值，應落入第二期高血壓。 */
+    @Test
+    fun `high stage 2 when both values are Int MAX_VALUE`() {
+        val result = bloodPressureLevel(Int.MAX_VALUE, Int.MAX_VALUE)
+
+        assertThat(result).isEqualTo(BloodPressureLevel.HIGH_STAGE_2)
+    }
 }
