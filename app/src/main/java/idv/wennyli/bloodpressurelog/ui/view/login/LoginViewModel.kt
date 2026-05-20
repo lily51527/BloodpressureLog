@@ -49,11 +49,18 @@ class LoginViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
                 authRepository.signInWithEmail(state.email, state.password)
-                if (authRepository.currentUser?.isEmailVerified == true) {
-                    _navigateToMain.emit(Unit)
-                } else {
-                    _uiState.update { it.copy(isLoading = false) }
-                    _navigateToEmailVerification.emit(Unit)
+                val currentUser = authRepository.currentUser
+                when {
+                    currentUser == null -> {
+                        _uiState.update { it.copy(isLoading = false, errorMessage = "登入失敗，請稍後再試") }
+                    }
+                    currentUser.isEmailVerified -> {
+                        _navigateToMain.emit(Unit)
+                    }
+                    else -> {
+                        _uiState.update { it.copy(isLoading = false) }
+                        _navigateToEmailVerification.emit(Unit)
+                    }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "") }

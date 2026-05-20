@@ -75,20 +75,23 @@ class LoginViewModelTest {
         }
     }
 
-    /** Email 尚未驗證的使用者登入後，應導向 Email 驗證畫面。 */
+    /** Email 尚未驗證的使用者登入後，應導向 Email 驗證畫面並清除 isLoading。 */
     @Test
-    fun `signInWithEmail emits navigateToEmailVerification when email is not verified`() = runTest {
-        val mockUser = mockk<FirebaseUser>()
-        every { mockUser.isEmailVerified } returns false
-        every { mockAuthRepository.currentUser } returns mockUser
-        coEvery { mockAuthRepository.signInWithEmail(any(), any()) } just Runs
+    fun `signInWithEmail emits navigateToEmailVerification and clears isLoading when email is not verified`() =
+        runTest {
+            val mockUser = mockk<FirebaseUser>()
+            every { mockUser.isEmailVerified } returns false
+            every { mockAuthRepository.currentUser } returns mockUser
+            coEvery { mockAuthRepository.signInWithEmail(any(), any()) } just Runs
 
-        viewModel.navigateToEmailVerification.test {
-            viewModel.signInWithEmail()
-            awaitItem()
-            cancelAndIgnoreRemainingEvents()
+            viewModel.navigateToEmailVerification.test {
+                viewModel.signInWithEmail()
+                awaitItem()
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertThat(viewModel.uiState.value.isLoading).isFalse()
         }
-    }
 
     /** Email 登入失敗時，應顯示錯誤訊息並清除載入狀態。 */
     @Test
@@ -137,4 +140,83 @@ class LoginViewModelTest {
 
         assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
+
+    // ── Existence：currentUser 為 null ────────────────────────────────────────
+
+    /**
+     * 登入後 currentUser 回傳 null（sign-in 成功卻無 user，屬於異常狀態），
+     * 不應導向任何頁面，應顯示錯誤訊息並清除 isLoading。
+     */
+    @Test
+    fun `signInWithEmail sets errorMessage and clears isLoading when currentUser is null after sign in`() =
+        runTest {
+            every { mockAuthRepository.currentUser } returns null
+            coEvery { mockAuthRepository.signInWithEmail(any(), any()) } just Runs
+
+            viewModel.signInWithEmail()
+
+            val state = viewModel.uiState.value
+            assertThat(state.isLoading).isFalse()
+            assertThat(state.errorMessage).isEqualTo("登入失敗，請稍後再試")
+        }
+
+    // ── Boundary：例外訊息為 null ─────────────────────────────────────────────
+
+    /**
+     * signInWithEmail 拋出 message 為 null 的 Exception 時，
+     * errorMessage 應 fallback 為空字串（`e.message ?: ""`）。
+     */
+    @Test
+    fun `signInWithEmail sets empty string errorMessage when exception message is null`() = runTest {
+        coEvery { mockAuthRepository.signInWithEmail(any(), any()) } throws RuntimeException()
+
+        viewModel.signInWithEmail()
+
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("")
+    }
+
+    /**
+     * signInAnonymously 拋出 message 為 null 的 Exception 時，
+     * errorMessage 應 fallback 為空字串（`e.message ?: ""`）。
+     */
+    @Test
+    fun `signInAnonymously sets empty string errorMessage when exception message is null`() =
+        runTest {
+            coEvery { mockAuthRepository.signInAnonymously() } throws RuntimeException()
+
+            viewModel.signInAnonymously()
+
+            assertThat(viewModel.uiState.value.errorMessage).isEqualTo("")
+        }
+
+    // ── Inverse：輸入變更清除既有錯誤 ─────────────────────────────────────────
+
+    /**
+     * 先觸發登入失敗讓 errorMessage 有值，
+     * 再呼叫 onEmailChange，確認 errorMessage 真的被清除。
+     */
+    @Test
+    fun `onEmailChange clears pre-existing errorMessage`() = runTest {
+        coEvery { mockAuthRepository.signInWithEmail(any(), any()) } throws RuntimeException("err")
+        viewModel.signInWithEmail()
+
+        viewModel.onEmailChange("new@example.com")
+
+        assertThat(viewModel.uiState.value.errorMessage).isNull()
+    }
+
+    /**
+     * 先觸發登入失敗讓 errorMessage 有值，
+     * 再呼叫 onPasswordChange，確認 errorMessage 真的被清除。
+     */
+    @Test
+    fun `onPasswordChange clears pre-existing errorMessage`() = runTest {
+        coEvery { mockAuthRepository.signInWithEmail(any(), any()) } throws RuntimeException("err")
+        viewModel.signInWithEmail()
+
+        viewModel.onPasswordChange("newpassword")
+
+        assertThat(viewModel.uiState.value.errorMessage).isNull()
+    }
+
 }
