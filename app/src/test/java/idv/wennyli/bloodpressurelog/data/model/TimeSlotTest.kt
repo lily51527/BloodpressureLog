@@ -3,6 +3,7 @@ package idv.wennyli.bloodpressurelog.data.model
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import kotlin.test.Test
+import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 
@@ -72,5 +73,84 @@ class TimeSlotTest {
     @Test
     fun `hour 23 is EVENING`() {
         assertThat(recordAt(23, 59).timeSlot).isEqualTo(TimeSlot.EVENING)
+    }
+
+    // ── 凌晨時段補全（hour 1~4 補足 NIGHT 完整覆蓋） ──────────────────────────
+
+    /** 凌晨 1 時的紀錄，時段應判斷為夜間。 */
+    @Test
+    fun `hour 1 is NIGHT`() {
+        assertThat(recordAt(1).timeSlot).isEqualTo(TimeSlot.NIGHT)
+    }
+
+    /** 凌晨 2 時的紀錄，時段應判斷為夜間。 */
+    @Test
+    fun `hour 2 is NIGHT`() {
+        assertThat(recordAt(2).timeSlot).isEqualTo(TimeSlot.NIGHT)
+    }
+
+    /** 凌晨 3 時的紀錄，時段應判斷為夜間。 */
+    @Test
+    fun `hour 3 is NIGHT`() {
+        assertThat(recordAt(3).timeSlot).isEqualTo(TimeSlot.NIGHT)
+    }
+
+    /** 凌晨 4 時的紀錄，時段應判斷為夜間。 */
+    @Test
+    fun `hour 4 is NIGHT`() {
+        assertThat(recordAt(4).timeSlot).isEqualTo(TimeSlot.NIGHT)
+    }
+
+    // ── 異常值：記錄極端 epoch 毫秒的實際行為 ─────────────────────────────────
+
+    /**
+     * recordedAt = 0L（Unix epoch 起點）。
+     * 以系統預設時區轉換後取得 hour，動態計算預期值以確保任何時區下測試均可通過。
+     * 驗證目的：確認 timeSlot 不因極小值而拋出例外，且行為與直接用 Instant API 計算一致。
+     */
+    @Test
+    fun `recordedAt 0L does not throw and matches expected time slot`() {
+        val epochZero = 0L
+
+        val hour = Instant.ofEpochMilli(epochZero)
+            .atZone(ZoneId.systemDefault())
+            .hour
+        val expected = when (hour) {
+            in 6..11 -> TimeSlot.MORNING
+            in 12..17 -> TimeSlot.AFTERNOON
+            in 18..23 -> TimeSlot.EVENING
+            else -> TimeSlot.NIGHT
+        }
+
+        val record = BloodPressureRecord(
+            systolic = 120, diastolic = 80, pulse = 70,
+            recordedAt = epochZero,
+        )
+        assertThat(record.timeSlot).isEqualTo(expected)
+    }
+
+    /**
+     * recordedAt = Long.MAX_VALUE（毫秒最大值，約西元 292278994 年）。
+     * 驗證目的：確認 timeSlot 不因極大值而拋出例外，且行為與直接用 Instant API 計算一致。
+     */
+    @Test
+    fun `recordedAt Long MAX_VALUE does not throw and matches expected time slot`() {
+        val maxMillis = Long.MAX_VALUE
+
+        val hour = Instant.ofEpochMilli(maxMillis)
+            .atZone(ZoneId.systemDefault())
+            .hour
+        val expected = when (hour) {
+            in 6..11 -> TimeSlot.MORNING
+            in 12..17 -> TimeSlot.AFTERNOON
+            in 18..23 -> TimeSlot.EVENING
+            else -> TimeSlot.NIGHT
+        }
+
+        val record = BloodPressureRecord(
+            systolic = 120, diastolic = 80, pulse = 70,
+            recordedAt = maxMillis,
+        )
+        assertThat(record.timeSlot).isEqualTo(expected)
     }
 }
