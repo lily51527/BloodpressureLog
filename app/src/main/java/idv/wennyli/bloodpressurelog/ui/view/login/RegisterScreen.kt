@@ -40,7 +40,6 @@ fun RegisterScreen(
     viewModel: RegisterViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val passwordMismatchError = stringResource(R.string.error_passwords_do_not_match)
 
     LaunchedEffect(Unit) {
         viewModel.navigateToEmailVerification.collect { onRegisterSuccess() }
@@ -51,7 +50,7 @@ fun RegisterScreen(
         onEmailChange = viewModel::onEmailChange,
         onPasswordChange = viewModel::onPasswordChange,
         onConfirmPasswordChange = viewModel::onConfirmPasswordChange,
-        onRegister = { viewModel.register(passwordMismatchError) },
+        onRegister = viewModel::register,
         onNavigateToLogin = onNavigateToLogin,
     )
 }

@@ -6,9 +6,12 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isNull
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
+import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
+import idv.wennyli.bloodpressurelog.utils.ResourceProvider
 import io.mockk.Runs
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import kotlin.test.BeforeTest
@@ -25,11 +28,12 @@ class RegisterViewModelTest {
     val mainDispatcherRule = MainDispatcherRule(UnconfinedTestDispatcher())
 
     private val mockAuthRepository = mockk<AuthRepository>()
+    private val mockResourceProvider = mockk<ResourceProvider>()
     private lateinit var viewModel: RegisterViewModel
 
     @BeforeTest
     fun setUp() {
-        viewModel = RegisterViewModel(mockAuthRepository)
+        viewModel = RegisterViewModel(mockAuthRepository, mockResourceProvider)
     }
 
     /** 初始狀態下，所有輸入欄位應為空且不處於載入中或有錯誤。 */
@@ -70,10 +74,13 @@ class RegisterViewModelTest {
     /** 兩次輸入的密碼不一致時，註冊應顯示錯誤訊息而不進行實際註冊。 */
     @Test
     fun `register sets errorMessage when passwords do not match`() {
+        every {
+            mockResourceProvider.getString(R.string.error_passwords_do_not_match)
+        } returns "兩次輸入的密碼不一致"
         viewModel.onPasswordChange("abc123")
         viewModel.onConfirmPasswordChange("xyz456")
 
-        viewModel.register("兩次輸入的密碼不一致")
+        viewModel.register()
 
         assertThat(viewModel.uiState.value.errorMessage).isEqualTo("兩次輸入的密碼不一致")
         assertThat(viewModel.uiState.value.isLoading).isFalse()
@@ -87,7 +94,7 @@ class RegisterViewModelTest {
         coEvery { mockAuthRepository.registerWithEmail(any(), any()) } just Runs
 
         viewModel.navigateToEmailVerification.test {
-            viewModel.register("mismatch")
+            viewModel.register()
             awaitItem()
             cancelAndIgnoreRemainingEvents()
         }
@@ -101,7 +108,7 @@ class RegisterViewModelTest {
         coEvery { mockAuthRepository.registerWithEmail(any(), any()) } throws
             RuntimeException("Email already in use")
 
-        viewModel.register("mismatch")
+        viewModel.register()
 
         val state = viewModel.uiState.value
         assertThat(state.isLoading).isFalse()
