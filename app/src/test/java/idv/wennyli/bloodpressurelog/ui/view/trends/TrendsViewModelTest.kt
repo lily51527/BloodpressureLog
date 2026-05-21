@@ -16,19 +16,16 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import java.time.LocalDate
 import java.time.ZoneId
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class TrendsViewModelTest {
 
     @get:Rule
-    val mainDispatcherRule = MainDispatcherRule(UnconfinedTestDispatcher())
+    val mainDispatcherRule = MainDispatcherRule()
 
     private val mockRepository = mockk<BloodPressureRepository>()
     private val mockBuildChartDataUseCase = mockk<BuildChartDataUseCase>()

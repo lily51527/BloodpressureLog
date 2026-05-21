@@ -20,16 +20,13 @@ import io.mockk.just
 import io.mockk.mockk
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class AddEditRecordViewModelTest {
 
     @get:Rule
-    val mainDispatcherRule = MainDispatcherRule(UnconfinedTestDispatcher())
+    val mainDispatcherRule = MainDispatcherRule()
 
     private val mockRepository = mockk<BloodPressureRepository>()
     private val mockResourceProvider = mockk<ResourceProvider>()
