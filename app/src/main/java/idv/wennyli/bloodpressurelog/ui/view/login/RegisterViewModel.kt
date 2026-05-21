@@ -50,11 +50,25 @@ class RegisterViewModel @Inject constructor(
 
     fun register() {
         val state = _uiState.value
-        if (state.password != state.confirmPassword) {
-            _uiState.update {
-                it.copy(errorMessage = resourceProvider.getString(R.string.error_passwords_do_not_match))
+        when {
+            state.email.isBlank() -> {
+                _uiState.update {
+                    it.copy(errorMessage = resourceProvider.getString(R.string.error_email_required))
+                }
+                return
             }
-            return
+            state.password.length < 6 -> {
+                _uiState.update {
+                    it.copy(errorMessage = resourceProvider.getString(R.string.error_auth_weak_password))
+                }
+                return
+            }
+            state.password != state.confirmPassword -> {
+                _uiState.update {
+                    it.copy(errorMessage = resourceProvider.getString(R.string.error_passwords_do_not_match))
+                }
+                return
+            }
         }
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }

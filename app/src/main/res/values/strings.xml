@@ -65,6 +65,7 @@
     <string name="button_register">註冊</string>
     <string name="link_already_have_account">已有帳號？返回登入</string>
     <string name="error_passwords_do_not_match">兩次輸入的密碼不一致</string>
+    <string name="error_email_required">請輸入 Email</string>
 
     <!-- Email Verification Screen -->
     <string name="screen_title_email_verification">驗證您的 Email</string>
