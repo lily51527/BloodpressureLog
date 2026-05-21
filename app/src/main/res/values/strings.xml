@@ -105,4 +105,5 @@
     <string name="error_auth_operation_not_allowed">此登入方式目前不開放</string>
     <string name="error_auth_requires_recent_login">為保障安全，請重新登入後再試</string>
     <string name="error_auth_generic">操作失敗，請稍後再試</string>
+    <string name="error_sign_in_failed">登入失敗，請稍後再試</string>
 </resources>

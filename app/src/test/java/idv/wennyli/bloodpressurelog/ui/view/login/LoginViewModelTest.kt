@@ -7,7 +7,9 @@ import assertk.assertions.isFalse
 import assertk.assertions.isNull
 import com.google.firebase.auth.FirebaseUser
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
+import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
+import idv.wennyli.bloodpressurelog.utils.ResourceProvider
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.every
@@ -24,11 +26,12 @@ class LoginViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val mockAuthRepository = mockk<AuthRepository>()
+    private val mockResourceProvider = mockk<ResourceProvider>()
     private lateinit var viewModel: LoginViewModel
 
     @BeforeTest
     fun setUp() {
-        viewModel = LoginViewModel(mockAuthRepository)
+        viewModel = LoginViewModel(mockAuthRepository, mockResourceProvider)
     }
 
     /** 初始狀態下，email 和 password 應為空且不處於載入中或有錯誤。 */
@@ -147,6 +150,9 @@ class LoginViewModelTest {
     @Test
     fun `signInWithEmail sets errorMessage and clears isLoading when currentUser is null after sign in`() =
         runTest {
+            every {
+                mockResourceProvider.getString(R.string.error_sign_in_failed)
+            } returns "登入失敗，請稍後再試"
             every { mockAuthRepository.currentUser } returns null
             coEvery { mockAuthRepository.signInWithEmail(any(), any()) } just Runs
 
