@@ -169,4 +169,46 @@ class RecordListViewModelTest {
         assertThat(state.records).isEmpty()
         assertThat(state.errorMessage).isNull()
     }
+
+    // ── Inverse：Error 後收到 Success，errorMessage 應被清除 ────────────────────
+
+    /**
+     * Flow 先發射 Error 再發射 Success 時，
+     * Success 的處理邏輯應將 errorMessage 重置為 null。
+     */
+    @Test
+    fun `success after error clears errorMessage`() {
+        val error = RuntimeException("Firestore error")
+        every { mockRepository.observeRecords() } returns flowOf(
+            DataState.Error(error, "Firestore error"),
+            DataState.Success(sampleRecords),
+        )
+
+        viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
+
+        val state = viewModel.uiState.value
+        assertThat(state.errorMessage).isNull()
+        assertThat(state.isLoading).isFalse()
+    }
+
+    // ── Cardinality：恰好 1 筆紀錄 ─────────────────────────────────────────────
+
+    /** 取得恰好 1 筆紀錄時，列表 size 應為 1，且正確顯示該筆資料。 */
+    @Test
+    fun `success with single record shows one item`() {
+        val singleRecord = BloodPressureRecord(
+            id = "only-1",
+            systolic = 120,
+            diastolic = 80,
+            pulse = 70,
+            recordedAt = 1000L,
+        )
+        every { mockRepository.observeRecords() } returns flowOf(DataState.Success(listOf(singleRecord)))
+
+        viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
+
+        val state = viewModel.uiState.value
+        assertThat(state.records.size).isEqualTo(1)
+        assertThat(state.records.first().id).isEqualTo("only-1")
+    }
 }
