@@ -77,58 +77,75 @@ internal fun ForgotPasswordScreenContent(
                     color = MaterialTheme.colorScheme.primary,
                 )
             } else {
-                Text(
-                    text = stringResource(R.string.forgot_password_description),
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
+                ForgotPasswordForm(
+                    email = uiState.email,
+                    isLoading = uiState.isLoading,
+                    errorMessage = uiState.errorMessage,
+                    onEmailChange = onEmailChange,
+                    onSendResetEmail = onSendResetEmail,
                 )
-                Spacer(modifier = Modifier.height(24.dp))
-
-                OutlinedTextField(
-                    value = uiState.email,
-                    onValueChange = onEmailChange,
-                    label = { Text(stringResource(R.string.label_email)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Email,
-                        imeAction = ImeAction.Done,
-                    ),
-                    keyboardActions = KeyboardActions(onDone = { onSendResetEmail() }),
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !uiState.isLoading,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                if (uiState.errorMessage != null) {
-                    Text(
-                        text = uiState.errorMessage,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-
-                Button(
-                    onClick = onSendResetEmail,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !uiState.isLoading,
-                ) {
-                    if (uiState.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp,
-                        )
-                    } else {
-                        Text(stringResource(R.string.button_send_reset_link))
-                    }
-                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
             TextButton(onClick = onNavigateBack) {
                 Text(stringResource(R.string.button_back_to_login))
             }
+        }
+    }
+}
+
+@Composable
+private fun ForgotPasswordForm(
+    email: String,
+    isLoading: Boolean,
+    errorMessage: String?,
+    onEmailChange: (String) -> Unit,
+    onSendResetEmail: () -> Unit,
+) {
+    Text(
+        text = stringResource(R.string.forgot_password_description),
+        style = MaterialTheme.typography.bodyMedium,
+        textAlign = TextAlign.Center,
+    )
+    Spacer(modifier = Modifier.height(24.dp))
+
+    OutlinedTextField(
+        value = email,
+        onValueChange = onEmailChange,
+        label = { Text(stringResource(R.string.label_email)) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Email,
+            imeAction = ImeAction.Done,
+        ),
+        keyboardActions = KeyboardActions(onDone = { onSendResetEmail() }),
+        modifier = Modifier.fillMaxWidth(),
+        enabled = !isLoading,
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+
+    if (errorMessage != null) {
+        Text(
+            text = errorMessage,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+
+    Button(
+        onClick = onSendResetEmail,
+        modifier = Modifier.fillMaxWidth(),
+        enabled = !isLoading,
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                color = MaterialTheme.colorScheme.onPrimary,
+                strokeWidth = 2.dp,
+            )
+        } else {
+            Text(stringResource(R.string.button_send_reset_link))
         }
     }
 }
