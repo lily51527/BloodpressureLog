@@ -122,4 +122,47 @@ class EmailVerificationViewModelTest {
 
         coVerify(exactly = 1) { mockAuthRepository.signOut() }
     }
+
+    // ── Existence：currentUser 為 null ────────────────────────────────────────
+
+    /** currentUser 為 null 時（未登入狀態），初始 email 欄位應為空字串。 */
+    @Test
+    fun `initial state has empty email when currentUser is null`() {
+        // setUp 已設定 currentUser = null
+        assertThat(viewModel.uiState.value.email).isEqualTo("")
+    }
+
+    // ── Boundary：例外訊息為 null ─────────────────────────────────────────────
+
+    /**
+     * resendVerificationEmail 拋出 message 為 null 的 Exception 時，
+     * errorMessage 應 fallback 為空字串（`e.message ?: ""`）。
+     */
+    @Test
+    fun `resendVerificationEmail sets empty string errorMessage when exception message is null`() =
+        runTest(testDispatcher) {
+            coEvery { mockAuthRepository.sendEmailVerification() } throws RuntimeException()
+
+            advanceTimeBy(EmailVerificationViewModel.RESEND_COOLDOWN_SECONDS * 1_000L + 100)
+            viewModel.resendVerificationEmail()
+
+            assertThat(viewModel.uiState.value.errorMessage).isEqualTo("")
+        }
+
+    // ── Inverse：失敗後冷卻不重置 ─────────────────────────────────────────────
+
+    /**
+     * resend 失敗後，冷卻倒數不應重置（仍為 0），
+     * 確保使用者可以立即重試，不被鎖定。
+     */
+    @Test
+    fun `resendVerificationEmail does not restart cooldown on failure`() =
+        runTest(testDispatcher) {
+            coEvery { mockAuthRepository.sendEmailVerification() } throws RuntimeException("error")
+
+            advanceTimeBy(EmailVerificationViewModel.RESEND_COOLDOWN_SECONDS * 1_000L + 100)
+            viewModel.resendVerificationEmail()
+
+            assertThat(viewModel.uiState.value.resendCooldownSeconds).isEqualTo(0)
+        }
 }
