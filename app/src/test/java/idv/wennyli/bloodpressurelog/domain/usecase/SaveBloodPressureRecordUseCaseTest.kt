@@ -32,7 +32,6 @@ class SaveBloodPressureRecordUseCaseTest {
             pulse = 72,
             note = "運動後",
             recordedAt = 1000L,
-            originalCreatedAt = 500L,
         )
 
         assertThat(result).isInstanceOf(SaveRecordResult.Success::class)
@@ -55,7 +54,6 @@ class SaveBloodPressureRecordUseCaseTest {
             pulse = 72,
             note = "",
             recordedAt = 1000L,
-            originalCreatedAt = 500L,
         )
 
         assertThat(result).isInstanceOf(SaveRecordResult.Error::class)
@@ -74,7 +72,6 @@ class SaveBloodPressureRecordUseCaseTest {
             pulse = 72,
             note = "",
             recordedAt = 1000L,
-            originalCreatedAt = 500L,
         )
 
         assertThat((result as SaveRecordResult.Error).message).isNull()
@@ -82,37 +79,34 @@ class SaveBloodPressureRecordUseCaseTest {
 
     // ── 編輯模式（recordId != null）──
 
-    /** 編輯模式下儲存成功，應回傳 Success 並以正確參數呼叫 updateRecord，且保留原始 createdAt。 */
+    /** 編輯模式下儲存成功，應回傳 Success 並以正確參數呼叫 updateRecord。 */
     @Test
-    fun `edit mode calls updateRecord with correct values and preserved createdAt and returns Success`() =
-        runTest {
-            coEvery { mockRepository.updateRecord(any()) } just Runs
+    fun `edit mode calls updateRecord with correct values and returns Success`() = runTest {
+        coEvery { mockRepository.updateRecord(any()) } just Runs
 
-            val result = useCase(
-                recordId = "record-1",
-                systolic = 130,
-                diastolic = 85,
-                pulse = 75,
-                note = "after exercise",
-                recordedAt = 1000L,
-                originalCreatedAt = 500L,
+        val result = useCase(
+            recordId = "record-1",
+            systolic = 130,
+            diastolic = 85,
+            pulse = 75,
+            note = "after exercise",
+            recordedAt = 1000L,
+        )
+
+        assertThat(result).isInstanceOf(SaveRecordResult.Success::class)
+        coVerify {
+            mockRepository.updateRecord(
+                match {
+                    it.id == "record-1" &&
+                        it.systolic == 130 &&
+                        it.diastolic == 85 &&
+                        it.pulse == 75 &&
+                        it.note == "after exercise" &&
+                        it.recordedAt == 1000L
+                },
             )
-
-            assertThat(result).isInstanceOf(SaveRecordResult.Success::class)
-            coVerify {
-                mockRepository.updateRecord(
-                    match {
-                        it.id == "record-1" &&
-                                it.systolic == 130 &&
-                                it.diastolic == 85 &&
-                                it.pulse == 75 &&
-                                it.note == "after exercise" &&
-                                it.recordedAt == 1000L &&
-                                it.createdAt == 500L
-                    },
-                )
-            }
         }
+    }
 
     /** 編輯模式下 Repository 拋出例外，應回傳帶有錯誤訊息的 Error。 */
     @Test
@@ -126,7 +120,6 @@ class SaveBloodPressureRecordUseCaseTest {
             pulse = 75,
             note = "",
             recordedAt = 1000L,
-            originalCreatedAt = 500L,
         )
 
         assertThat(result).isInstanceOf(SaveRecordResult.Error::class)

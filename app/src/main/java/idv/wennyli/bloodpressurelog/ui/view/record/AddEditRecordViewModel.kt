@@ -25,7 +25,6 @@ data class AddEditRecordUiState(
     val pulse: String = "",
     val note: String = "",
     val recordedAt: Long = System.currentTimeMillis(),
-    val originalCreatedAt: Long = System.currentTimeMillis(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val isEditMode: Boolean = false,
@@ -66,7 +65,6 @@ class AddEditRecordViewModel @Inject constructor(
                             pulse = record.pulse.toString(),
                             note = record.note,
                             recordedAt = record.recordedAt,
-                            originalCreatedAt = record.createdAt,
                             isLoading = false,
                         )
                     }
@@ -125,7 +123,6 @@ class AddEditRecordViewModel @Inject constructor(
                 pulse = pulse,
                 note = state.note,
                 recordedAt = state.recordedAt,
-                originalCreatedAt = state.originalCreatedAt,
             )) {
                 is SaveRecordResult.Success -> {
                     _uiState.update { it.copy(isLoading = false) }

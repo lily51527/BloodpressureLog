@@ -198,7 +198,7 @@ class AddEditRecordViewModelTest {
     /** 驗證通過後，應將解析後的 Int 值傳給 SaveRecordUseCase。 */
     @Test
     fun `save passes parsed int values to saveRecordUseCase`() = runTest {
-        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Success
+        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Success
         val viewModel = addModeViewModel()
         viewModel.onSystolicChange("120")
         viewModel.onDiastolicChange("80")
@@ -215,7 +215,6 @@ class AddEditRecordViewModelTest {
                 pulse = 72,
                 note = "運動後",
                 recordedAt = any(),
-                originalCreatedAt = any(),
             )
         }
     }
@@ -223,7 +222,7 @@ class AddEditRecordViewModelTest {
     /** 新增模式儲存成功後，應發射 savedSuccessfully 事件並重置 isLoading。 */
     @Test
     fun `save success in add mode emits savedSuccessfully and resets isLoading`() = runTest {
-        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Success
+        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Success
         val viewModel = addModeViewModel()
         viewModel.onSystolicChange("120")
         viewModel.onDiastolicChange("80")
@@ -241,7 +240,7 @@ class AddEditRecordViewModelTest {
     /** 新增模式儲存失敗時，應顯示錯誤訊息並清除載入狀態。 */
     @Test
     fun `save error in add mode sets errorMessage and resets isLoading`() = runTest {
-        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Error("Network error")
+        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Error("Network error")
         val viewModel = addModeViewModel()
         viewModel.onSystolicChange("120")
         viewModel.onDiastolicChange("80")
@@ -257,7 +256,7 @@ class AddEditRecordViewModelTest {
     @Test
     fun `save error with null message shows fallback error`() = runTest {
         every { mockResourceProvider.getString(R.string.error_record_save_failed) } returns "儲存失敗"
-        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Error(null)
+        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Error(null)
         val viewModel = addModeViewModel()
         viewModel.onSystolicChange("120")
         viewModel.onDiastolicChange("80")
@@ -292,7 +291,6 @@ class AddEditRecordViewModelTest {
         assertThat(state.pulse).isEqualTo("75")
         assertThat(state.note).isEqualTo("after exercise")
         assertThat(state.recordedAt).isEqualTo(1000L)
-        assertThat(state.originalCreatedAt).isEqualTo(500L)
         assertThat(state.isEditMode).isTrue()
         assertThat(state.isLoading).isFalse()
     }
@@ -334,9 +332,9 @@ class AddEditRecordViewModelTest {
         assertThat(state.isLoading).isFalse()
     }
 
-    /** 編輯模式儲存時，應將載入的 originalCreatedAt 傳給 SaveRecordUseCase。 */
+    /** 編輯模式儲存時，應以載入的紀錄值呼叫 SaveRecordUseCase。 */
     @Test
-    fun `save in edit mode passes originalCreatedAt to saveRecordUseCase`() = runTest {
+    fun `save in edit mode passes loaded record values to saveRecordUseCase`() = runTest {
         val record = BloodPressureRecord(
             id = "record-1",
             systolic = 130,
@@ -344,10 +342,9 @@ class AddEditRecordViewModelTest {
             pulse = 75,
             note = "",
             recordedAt = 1000L,
-            createdAt = 500L,
         )
         coEvery { mockRepository.getRecord("record-1") } returns record
-        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Success
+        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Success
 
         val viewModel = editModeViewModel("record-1")
         viewModel.save()
@@ -360,7 +357,6 @@ class AddEditRecordViewModelTest {
                 pulse = 75,
                 note = "",
                 recordedAt = 1000L,
-                originalCreatedAt = 500L,
             )
         }
     }
@@ -378,7 +374,7 @@ class AddEditRecordViewModelTest {
             createdAt = 500L,
         )
         coEvery { mockRepository.getRecord("record-1") } returns record
-        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Error("Update failed")
+        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Error("Update failed")
 
         val viewModel = editModeViewModel("record-1")
         viewModel.save()
@@ -399,7 +395,7 @@ class AddEditRecordViewModelTest {
             recordedAt = 1000L,
         )
         coEvery { mockRepository.getRecord("record-1") } returns record
-        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Success
+        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Success
 
         val viewModel = editModeViewModel("record-1")
 

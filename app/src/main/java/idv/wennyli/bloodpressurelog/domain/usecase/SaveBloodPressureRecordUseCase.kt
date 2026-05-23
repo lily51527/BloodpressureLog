@@ -13,7 +13,6 @@ sealed interface SaveRecordResult {
  * 儲存血壓紀錄的 UseCase，負責以下業務邏輯：
  * - 依據 [recordId] 是否為 null 決定呼叫新增（[BloodPressureRepository.addRecord]）
  *   或更新（[BloodPressureRepository.updateRecord]）
- * - 編輯模式下保留原始 [originalCreatedAt]
  * - 捕捉 Repository 拋出的例外，轉換為 [SaveRecordResult.Error]
  */
 class SaveBloodPressureRecordUseCase @Inject constructor(
@@ -26,7 +25,6 @@ class SaveBloodPressureRecordUseCase @Inject constructor(
         pulse: Int,
         note: String,
         recordedAt: Long,
-        originalCreatedAt: Long,
     ): SaveRecordResult = try {
         if (recordId != null) {
             repository.updateRecord(
@@ -37,8 +35,6 @@ class SaveBloodPressureRecordUseCase @Inject constructor(
                     pulse = pulse,
                     note = note,
                     recordedAt = recordedAt,
-                    createdAt = originalCreatedAt,
-                    updatedAt = System.currentTimeMillis(),
                 ),
             )
         } else {
