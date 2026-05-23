@@ -125,4 +125,21 @@ class SaveBloodPressureRecordUseCaseTest {
         assertThat(result).isInstanceOf(SaveRecordResult.Error::class)
         assertThat((result as SaveRecordResult.Error).message).isEqualTo("Update failed")
     }
+
+    /** 編輯模式下例外的 message 為 null，Error.message 應為 null。 */
+    @Test
+    fun `edit mode returns Error with null message when exception has no message`() = runTest {
+        coEvery { mockRepository.updateRecord(any()) } throws RuntimeException(null as String?)
+
+        val result = useCase(
+            recordId = "record-1",
+            systolic = 130,
+            diastolic = 85,
+            pulse = 75,
+            note = "",
+            recordedAt = 1000L,
+        )
+
+        assertThat((result as SaveRecordResult.Error).message).isNull()
+    }
 }
