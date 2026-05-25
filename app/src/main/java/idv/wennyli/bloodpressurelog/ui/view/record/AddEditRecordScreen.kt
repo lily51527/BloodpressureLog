@@ -1,6 +1,5 @@
 package idv.wennyli.bloodpressurelog.ui.view.record
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,6 +27,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -43,7 +45,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -63,16 +64,13 @@ fun AddEditRecordScreen(
     stayOnScreen: Boolean = false,
     viewModel: AddEditRecordViewModel = hiltViewModel(),
 ) {
-    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val saveSuccessMessage = stringResource(R.string.toast_save_success)
 
     LaunchedEffect(Unit) {
         viewModel.savedSuccessfully.collect {
-            Toast.makeText(
-                context,
-                context.getString(R.string.toast_save_success),
-                Toast.LENGTH_SHORT
-            ).show()
+            snackbarHostState.showSnackbar(saveSuccessMessage)
             if (stayOnScreen) {
                 viewModel.resetForm()
             } else {
@@ -83,6 +81,7 @@ fun AddEditRecordScreen(
 
     AddEditRecordContent(
         uiState = uiState,
+        snackbarHostState = snackbarHostState,
         onNavigateBack = onNavigateBack,
         showNavigateBack = !stayOnScreen,
         onSystolicChange = viewModel::onSystolicChange,
@@ -100,6 +99,7 @@ internal fun AddEditRecordContent(
     uiState: AddEditRecordUiState,
     onNavigateBack: () -> Unit,
     showNavigateBack: Boolean = true,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onSystolicChange: (String) -> Unit,
     onDiastolicChange: (String) -> Unit,
     onPulseChange: (String) -> Unit,
@@ -134,6 +134,7 @@ internal fun AddEditRecordContent(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) { Snackbar(it) } },
         topBar = {
             TopAppBar(
                 title = {
