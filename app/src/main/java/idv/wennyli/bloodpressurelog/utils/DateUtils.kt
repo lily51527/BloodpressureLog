@@ -31,4 +31,28 @@ object DateUtils {
         val localDate: LocalDate = Instant.ofEpochMilli(utcMidnightMillis).atZone(ZoneOffset.UTC).toLocalDate()
         return localDate.atTime(hour, minute).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
     }
+
+    // Returns timestamp (ms) of 00:00:00.000 on the day that is `daysAgo` days before today.
+    fun startOfDay(daysAgo: Int = 0): Long {
+        val date = LocalDate.now(ZoneId.systemDefault()).minusDays(daysAgo.toLong())
+        return date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    }
+
+    // Returns timestamp (ms) of 23:59:59.999 on the day that is `daysAgo` days before today.
+    fun endOfDay(daysAgo: Int = 0): Long {
+        val date = LocalDate.now(ZoneId.systemDefault()).minusDays(daysAgo.toLong())
+        return date.atTime(23, 59, 59, 999_000_000).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    }
+
+    // Converts a UTC midnight millis (from DatePicker) to the start of that day in local timezone.
+    fun utcMidnightToStartOfDay(utcMidnightMillis: Long): Long {
+        val localDate = Instant.ofEpochMilli(utcMidnightMillis).atZone(ZoneOffset.UTC).toLocalDate()
+        return localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    }
+
+    // Converts a UTC midnight millis (from DatePicker) to the end of that day in local timezone.
+    fun utcMidnightToEndOfDay(utcMidnightMillis: Long): Long {
+        val localDate = Instant.ofEpochMilli(utcMidnightMillis).atZone(ZoneOffset.UTC).toLocalDate()
+        return localDate.atTime(23, 59, 59, 999_000_000).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    }
 }
