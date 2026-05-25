@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -76,6 +77,7 @@ class RegisterViewModel @Inject constructor(
                 authRepository.registerWithEmail(state.email, state.password)
                 _navigateToEmailVerification.emit(Unit)
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "") }
             }
         }

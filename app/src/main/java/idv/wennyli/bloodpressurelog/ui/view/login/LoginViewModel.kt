@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -71,6 +72,7 @@ class LoginViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "") }
             }
         }
@@ -83,6 +85,7 @@ class LoginViewModel @Inject constructor(
                 authRepository.signInAnonymously()
                 _navigateToMain.emit(Unit)
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "") }
             }
         }

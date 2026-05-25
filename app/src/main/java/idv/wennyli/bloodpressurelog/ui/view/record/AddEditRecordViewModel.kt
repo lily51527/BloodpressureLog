@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -75,6 +76,7 @@ class AddEditRecordViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Timber.e(e, "[AddEditRecordViewModel] loadRecord failed")
                 _uiState.update {
                     it.copy(isLoading = false, errorMessage = e.message ?: resourceProvider.getString(R.string.error_record_load_failed))

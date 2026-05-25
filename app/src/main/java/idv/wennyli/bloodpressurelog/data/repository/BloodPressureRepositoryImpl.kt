@@ -9,6 +9,7 @@ import idv.wennyli.bloodpressurelog.BuildConfig
 import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.utils.FirestorePaths
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -97,6 +98,7 @@ private fun com.google.firebase.firestore.DocumentSnapshot.toBloodPressureRecord
             updatedAt = getTimestamp("updatedAt")?.toEpochMillis() ?: System.currentTimeMillis(),
         )
     } catch (e: Exception) {
+        if (e is CancellationException) throw e
         Timber.e(e, "[BloodPressureRepositoryImpl] toBloodPressureRecord failed, documentId=$id")
         null
     }
