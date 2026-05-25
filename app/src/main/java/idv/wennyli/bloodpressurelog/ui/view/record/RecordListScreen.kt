@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExitToApp
@@ -25,7 +24,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -58,14 +56,14 @@ import idv.wennyli.bloodpressurelog.utils.DateUtils
 
 @Composable
 fun RecordListScreen(
-    onNavigateToAddEdit: (recordId: String?) -> Unit,
+    onNavigateToEdit: (recordId: String) -> Unit,
     viewModel: RecordListViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {
-        viewModel.navigateToAddEdit.collect { recordId ->
-            onNavigateToAddEdit(recordId)
+        viewModel.navigateToEdit.collect { recordId ->
+            onNavigateToEdit(recordId)
         }
     }
 
@@ -74,8 +72,8 @@ fun RecordListScreen(
     if (recordIdToDelete != null) {
         AlertDialog(
             onDismissRequest = { recordIdToDelete = null },
-            title = { Text(stringResource(R.string.dialog_title_delete_record)) },
-            text = { Text(stringResource(R.string.dialog_message_delete_record)) },
+            title = { Text(stringResource(R.string.record_list_dialog_delete_title)) },
+            text = { Text(stringResource(R.string.record_list_dialog_delete_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -83,11 +81,11 @@ fun RecordListScreen(
                         recordIdToDelete = null
                     },
                 ) {
-                    Text(stringResource(R.string.button_delete), color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.record_list_button_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { recordIdToDelete = null }) { Text(stringResource(R.string.button_cancel)) }
+                TextButton(onClick = { recordIdToDelete = null }) { Text(stringResource(R.string.common_button_cancel)) }
             },
         )
     }
@@ -95,7 +93,6 @@ fun RecordListScreen(
     RecordListContent(
         uiState = uiState,
         onSignOut = viewModel::signOut,
-        onAddRecord = viewModel::onAddRecord,
         onEditRecord = viewModel::onEditRecord,
         onDeleteRecord = { recordIdToDelete = it },
     )
@@ -106,25 +103,19 @@ fun RecordListScreen(
 internal fun RecordListContent(
     uiState: RecordListUiState,
     onSignOut: () -> Unit,
-    onAddRecord: () -> Unit,
     onEditRecord: (String) -> Unit,
     onDeleteRecord: (String) -> Unit,
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.screen_title_record_list)) },
+                title = { Text(stringResource(R.string.record_list_screen_title)) },
                 actions = {
                     IconButton(onClick = onSignOut) {
-                        Icon(imageVector = Icons.Default.ExitToApp, contentDescription = stringResource(R.string.content_description_sign_out))
+                        Icon(imageVector = Icons.Default.ExitToApp, contentDescription = stringResource(R.string.record_list_cd_sign_out))
                     }
                 },
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onAddRecord) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(R.string.content_description_add_record))
-            }
         },
     ) { innerPadding ->
         Box(
@@ -169,7 +160,6 @@ internal fun RecordListContent(
                                 onDelete = { onDeleteRecord(record.id) },
                             )
                         }
-                        item { Spacer(modifier = Modifier.height(72.dp)) }
                     }
                 }
             }
@@ -233,14 +223,14 @@ private fun RecordCard(
             IconButton(onClick = onEdit) {
                 Icon(
                     imageVector = Icons.Default.Edit,
-                    contentDescription = stringResource(R.string.content_description_edit),
+                    contentDescription = stringResource(R.string.record_list_cd_edit),
                     modifier = Modifier.size(20.dp),
                 )
             }
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = stringResource(R.string.content_description_delete),
+                    contentDescription = stringResource(R.string.record_list_cd_delete),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.error,
                 )
@@ -258,10 +248,10 @@ private fun BloodPressureLevel.color(): Color = when (this) {
 
 @Composable
 private fun TimeSlot.displayName(): String = when (this) {
-    TimeSlot.MORNING -> stringResource(R.string.time_slot_morning)
-    TimeSlot.AFTERNOON -> stringResource(R.string.time_slot_afternoon)
-    TimeSlot.EVENING -> stringResource(R.string.time_slot_evening)
-    TimeSlot.NIGHT -> stringResource(R.string.time_slot_night)
+    TimeSlot.MORNING -> stringResource(R.string.record_list_time_slot_morning)
+    TimeSlot.AFTERNOON -> stringResource(R.string.record_list_time_slot_afternoon)
+    TimeSlot.EVENING -> stringResource(R.string.record_list_time_slot_evening)
+    TimeSlot.NIGHT -> stringResource(R.string.record_list_time_slot_night)
 }
 
 @Preview(showBackground = true, name = "RecordList - With Records")
@@ -299,7 +289,6 @@ private fun RecordListWithRecordsPreview() {
                 ),
             ),
             onSignOut = {},
-            onAddRecord = {},
             onEditRecord = {},
             onDeleteRecord = {},
         )
@@ -313,7 +302,6 @@ private fun RecordListEmptyPreview() {
         RecordListContent(
             uiState = RecordListUiState(isLoading = false, records = emptyList()),
             onSignOut = {},
-            onAddRecord = {},
             onEditRecord = {},
             onDeleteRecord = {},
         )
@@ -327,7 +315,6 @@ private fun RecordListLoadingPreview() {
         RecordListContent(
             uiState = RecordListUiState(isLoading = true),
             onSignOut = {},
-            onAddRecord = {},
             onEditRecord = {},
             onDeleteRecord = {},
         )

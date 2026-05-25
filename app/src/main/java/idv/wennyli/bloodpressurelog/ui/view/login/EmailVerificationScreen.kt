@@ -62,7 +62,7 @@ internal fun EmailVerificationScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = stringResource(R.string.screen_title_email_verification),
+                text = stringResource(R.string.email_verification_screen_title),
                 style = MaterialTheme.typography.headlineMedium,
             )
             Spacer(modifier = Modifier.height(32.dp))
@@ -95,15 +95,15 @@ internal fun EmailVerificationScreenContent(
                         strokeWidth = 2.dp,
                     )
                 } else if (uiState.resendCooldownSeconds > 0) {
-                    Text(stringResource(R.string.button_resend_cooldown, uiState.resendCooldownSeconds))
+                    Text(stringResource(R.string.email_verification_button_resend_cooldown, uiState.resendCooldownSeconds))
                 } else {
-                    Text(stringResource(R.string.button_resend_verification_email))
+                    Text(stringResource(R.string.email_verification_button_resend))
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
 
             TextButton(onClick = onBackToLogin) {
-                Text(stringResource(R.string.button_back_to_login))
+                Text(stringResource(R.string.common_button_back_to_login))
             }
         }
     }

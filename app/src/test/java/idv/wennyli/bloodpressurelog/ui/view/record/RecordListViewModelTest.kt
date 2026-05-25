@@ -46,7 +46,7 @@ class RecordListViewModelTest {
     @BeforeTest
     fun setUp() {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Loading)
-        every { mockResourceProvider.getString(R.string.error_delete_record_failed) } returns "刪除失敗，請稍後再試"
+        every { mockResourceProvider.getString(R.string.record_list_error_delete_failed) } returns "刪除失敗，請稍後再試"
         viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
     }
 
@@ -95,20 +95,10 @@ class RecordListViewModelTest {
         assertThat(viewModel.uiState.value.isLoading).isTrue()
     }
 
-    /** 點擊新增按鈕時，應發射 null 導航事件以開啟新增紀錄畫面。 */
-    @Test
-    fun `onAddRecord emits null to navigateToAddEdit`() = runTest {
-        viewModel.navigateToAddEdit.test {
-            viewModel.onAddRecord()
-            assertThat(awaitItem()).isNull()
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
     /** 點擊編輯按鈕時，應發射對應 recordId 的導航事件以開啟編輯畫面。 */
     @Test
-    fun `onEditRecord emits recordId to navigateToAddEdit`() = runTest {
-        viewModel.navigateToAddEdit.test {
+    fun `onEditRecord emits recordId to navigateToEdit`() = runTest {
+        viewModel.navigateToEdit.test {
             viewModel.onEditRecord("record-123")
             assertThat(awaitItem()).isEqualTo("record-123")
             cancelAndIgnoreRemainingEvents()

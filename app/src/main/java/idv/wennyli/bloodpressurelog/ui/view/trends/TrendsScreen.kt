@@ -68,7 +68,7 @@ internal fun TrendsContent(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(stringResource(R.string.screen_title_trends)) })
+            TopAppBar(title = { Text(stringResource(R.string.trends_screen_title)) })
         },
     ) { innerPadding ->
         Column(
@@ -225,10 +225,10 @@ private fun SystolicThresholdLegend(modifier: Modifier = Modifier) {
         )
         Spacer(modifier = Modifier.height(4.dp))
         listOf(
-            Triple("< 120", stringResource(R.string.bp_level_normal), Color(0xFF4CAF50)),
-            Triple("120–129", stringResource(R.string.bp_level_elevated), Color(0xFFFFEB3B)),
-            Triple("130–139", stringResource(R.string.bp_level_high_stage_1), Color(0xFFFF9800)),
-            Triple("≥ 140", stringResource(R.string.bp_level_high_stage_2), Color(0xFFF44336)),
+            Triple("< 120", stringResource(R.string.trends_bp_level_normal), Color(0xFF4CAF50)),
+            Triple("120–129", stringResource(R.string.trends_bp_level_elevated), Color(0xFFFFEB3B)),
+            Triple("130–139", stringResource(R.string.trends_bp_level_high_stage_1), Color(0xFFFF9800)),
+            Triple("≥ 140", stringResource(R.string.trends_bp_level_high_stage_2), Color(0xFFF44336)),
         ).forEach { (range, label, color) ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,

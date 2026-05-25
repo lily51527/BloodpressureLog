@@ -59,7 +59,7 @@ class LoginViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
-                                errorMessage = resourceProvider.getString(R.string.error_sign_in_failed),
+                                errorMessage = resourceProvider.getString(R.string.login_error_sign_in_failed),
                             )
                         }
                     }

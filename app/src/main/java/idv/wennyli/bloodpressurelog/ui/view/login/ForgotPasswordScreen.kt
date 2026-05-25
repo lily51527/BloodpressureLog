@@ -64,7 +64,7 @@ internal fun ForgotPasswordScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = stringResource(R.string.screen_title_forgot_password),
+                text = stringResource(R.string.forgot_password_screen_title),
                 style = MaterialTheme.typography.headlineMedium,
             )
             Spacer(modifier = Modifier.height(32.dp))
@@ -88,7 +88,7 @@ internal fun ForgotPasswordScreenContent(
 
             Spacer(modifier = Modifier.height(8.dp))
             TextButton(onClick = onNavigateBack) {
-                Text(stringResource(R.string.button_back_to_login))
+                Text(stringResource(R.string.common_button_back_to_login))
             }
         }
     }
@@ -112,7 +112,7 @@ private fun ForgotPasswordForm(
     OutlinedTextField(
         value = email,
         onValueChange = onEmailChange,
-        label = { Text(stringResource(R.string.label_email)) },
+        label = { Text(stringResource(R.string.common_label_email)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Email,
@@ -145,7 +145,7 @@ private fun ForgotPasswordForm(
                 strokeWidth = 2.dp,
             )
         } else {
-            Text(stringResource(R.string.button_send_reset_link))
+            Text(stringResource(R.string.forgot_password_button_send_link))
         }
     }
 }

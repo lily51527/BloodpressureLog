@@ -37,9 +37,8 @@ class RecordListViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(RecordListUiState())
     val uiState: StateFlow<RecordListUiState> = _uiState.asStateFlow()
 
-    // null = add mode, non-null = recordId for edit mode
-    private val _navigateToAddEdit = MutableSharedFlow<String?>(extraBufferCapacity = 1)
-    val navigateToAddEdit: SharedFlow<String?> = _navigateToAddEdit.asSharedFlow()
+    private val _navigateToEdit = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val navigateToEdit: SharedFlow<String> = _navigateToEdit.asSharedFlow()
 
     init {
         observeRecords()
@@ -65,12 +64,8 @@ class RecordListViewModel @Inject constructor(
         }
     }
 
-    fun onAddRecord() {
-        viewModelScope.launch { _navigateToAddEdit.emit(null) }
-    }
-
     fun onEditRecord(id: String) {
-        viewModelScope.launch { _navigateToAddEdit.emit(id) }
+        viewModelScope.launch { _navigateToEdit.emit(id) }
     }
 
     fun signOut() {
@@ -85,7 +80,7 @@ class RecordListViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 Timber.e(e, "[RecordListViewModel] deleteRecord failed")
                 _uiState.update {
-                    it.copy(errorMessage = resourceProvider.getString(R.string.error_delete_record_failed))
+                    it.copy(errorMessage = resourceProvider.getString(R.string.record_list_error_delete_failed))
                 }
             }
         }

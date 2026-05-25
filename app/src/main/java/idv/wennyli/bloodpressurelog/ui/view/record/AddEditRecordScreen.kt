@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -26,6 +27,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -40,7 +44,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -51,20 +58,44 @@ import idv.wennyli.bloodpressurelog.utils.DateUtils
 import java.time.Instant
 import java.time.ZoneId
 
+/**
+ * 血壓新增／編輯畫面的入口 Composable。
+ *
+ * 負責：
+ * - 收集 [AddEditRecordViewModel] 的 [AddEditRecordUiState]
+ * - 監聽 [AddEditRecordViewModel.savedSuccessfully] 儲存成功事件
+ * - 依 [stayOnScreen] 決定儲存後行為：`true` 時重設表單（連續新增模式），`false` 時返回上一頁
+ *
+ * @param onNavigateBack 返回上一頁的回呼
+ * @param stayOnScreen 儲存成功後是否留在畫面（連續新增模式）；預設 `false`（儲存後離開）
+ * @param viewModel 由 Hilt 提供的 ViewModel 實例
+ */
 @Composable
 fun AddEditRecordScreen(
     onNavigateBack: () -> Unit,
+    stayOnScreen: Boolean = false,
     viewModel: AddEditRecordViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val saveSuccessMessage = stringResource(R.string.add_edit_record_message_save_success)
 
     LaunchedEffect(Unit) {
-        viewModel.savedSuccessfully.collect { onNavigateBack() }
+        viewModel.savedSuccessfully.collect {
+            snackbarHostState.showSnackbar(saveSuccessMessage)
+            if (stayOnScreen) {
+                viewModel.resetForm()
+            } else {
+                onNavigateBack()
+            }
+        }
     }
 
     AddEditRecordContent(
         uiState = uiState,
+        snackbarHostState = snackbarHostState,
         onNavigateBack = onNavigateBack,
+        showNavigateBack = !stayOnScreen,
         onSystolicChange = viewModel::onSystolicChange,
         onDiastolicChange = viewModel::onDiastolicChange,
         onPulseChange = viewModel::onPulseChange,
@@ -74,11 +105,30 @@ fun AddEditRecordScreen(
     )
 }
 
+/**
+ * 血壓新增／編輯畫面的 UI 內容層（無狀態 Composable）。
+ *
+ * 包含：收縮壓／舒張壓／脈搏／備註輸入欄位、日期與時間選擇器按鈕、
+ * 錯誤訊息顯示，以及儲存按鈕（儲存中顯示進度指示器）。
+ *
+ * @param uiState 當前 UI 狀態
+ * @param onNavigateBack 返回上一頁的回呼
+ * @param showNavigateBack 是否顯示 TopAppBar 的返回按鈕；預設 `true`
+ * @param snackbarHostState 用於顯示儲存成功 Snackbar 的狀態物件
+ * @param onSystolicChange 收縮壓輸入變更回呼
+ * @param onDiastolicChange 舒張壓輸入變更回呼
+ * @param onPulseChange 脈搏輸入變更回呼
+ * @param onNoteChange 備註輸入變更回呼
+ * @param onRecordedAtChange 記錄時間變更回呼（epoch milliseconds）
+ * @param onSave 儲存按鈕點擊回呼
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AddEditRecordContent(
     uiState: AddEditRecordUiState,
     onNavigateBack: () -> Unit,
+    showNavigateBack: Boolean = true,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onSystolicChange: (String) -> Unit,
     onDiastolicChange: (String) -> Unit,
     onPulseChange: (String) -> Unit,
@@ -86,82 +136,51 @@ internal fun AddEditRecordContent(
     onRecordedAtChange: (Long) -> Unit,
     onSave: () -> Unit,
 ) {
+    val focusManager = LocalFocusManager.current
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
 
-    val currentZdt = remember(uiState.recordedAt) {
-        Instant.ofEpochMilli(uiState.recordedAt).atZone(ZoneId.systemDefault())
-    }
-
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = DateUtils.toUtcMidnightMillis(uiState.recordedAt),
+        RecordDatePickerDialog(
+            recordedAt = uiState.recordedAt,
+            onConfirm = { newRecordedAt ->
+                onRecordedAtChange(newRecordedAt)
+                showDatePicker = false
+            },
+            onDismiss = { showDatePicker = false },
         )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val selectedDate = datePickerState.selectedDateMillis
-                        if (selectedDate != null) {
-                            val newEpoch = DateUtils.combineDateAndTime(
-                                selectedDate,
-                                currentZdt.hour,
-                                currentZdt.minute,
-                            )
-                            onRecordedAtChange(newEpoch)
-                        }
-                        showDatePicker = false
-                    },
-                ) { Text(stringResource(R.string.button_confirm)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.button_cancel)) }
-            },
-        ) {
-            DatePicker(state = datePickerState)
-        }
     }
 
     if (showTimePicker) {
-        val timePickerState = rememberTimePickerState(
-            initialHour = currentZdt.hour,
-            initialMinute = currentZdt.minute,
-            is24Hour = true,
-        )
-        AlertDialog(
-            onDismissRequest = { showTimePicker = false },
-            title = { Text(stringResource(R.string.dialog_title_time_picker)) },
-            text = { TimePicker(state = timePickerState) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val newEpoch = DateUtils.combineDateAndTime(
-                            DateUtils.toUtcMidnightMillis(uiState.recordedAt),
-                            timePickerState.hour,
-                            timePickerState.minute,
-                        )
-                        onRecordedAtChange(newEpoch)
-                        showTimePicker = false
-                    },
-                ) { Text(stringResource(R.string.button_confirm)) }
+        RecordTimePickerDialog(
+            recordedAt = uiState.recordedAt,
+            onConfirm = { newRecordedAt ->
+                onRecordedAtChange(newRecordedAt)
+                showTimePicker = false
             },
-            dismissButton = {
-                TextButton(onClick = { showTimePicker = false }) { Text(stringResource(R.string.button_cancel)) }
-            },
+            onDismiss = { showTimePicker = false },
         )
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) { Snackbar(it) } },
         topBar = {
             TopAppBar(
-                title = { Text(if (uiState.isEditMode) stringResource(R.string.screen_title_edit_record) else stringResource(R.string.screen_title_add_record)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.content_description_navigate_back),
+                title = {
+                    Text(
+                        if (uiState.isEditMode) stringResource(R.string.add_edit_record_screen_title_edit) else stringResource(
+                            R.string.add_edit_record_screen_title_add
                         )
+                    )
+                },
+                navigationIcon = {
+                    if (showNavigateBack) {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.add_edit_record_cd_navigate_back),
+                            )
+                        }
                     }
                 },
             )
@@ -177,48 +196,45 @@ internal fun AddEditRecordContent(
         ) {
             Spacer(modifier = Modifier.height(4.dp))
 
-            OutlinedTextField(
+            RecordFormField(
                 value = uiState.systolic,
                 onValueChange = onSystolicChange,
-                label = { Text(stringResource(R.string.label_systolic)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
+                label = stringResource(R.string.add_edit_record_label_systolic),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                 enabled = !uiState.isLoading,
             )
 
-            OutlinedTextField(
+            RecordFormField(
                 value = uiState.diastolic,
                 onValueChange = onDiastolicChange,
-                label = { Text(stringResource(R.string.label_diastolic)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
+                label = stringResource(R.string.add_edit_record_label_diastolic),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                 enabled = !uiState.isLoading,
             )
 
-            OutlinedTextField(
+            RecordFormField(
                 value = uiState.pulse,
                 onValueChange = onPulseChange,
-                label = { Text(stringResource(R.string.label_pulse)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
+                label = stringResource(R.string.add_edit_record_label_pulse),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                 enabled = !uiState.isLoading,
             )
 
-            OutlinedTextField(
+            RecordFormField(
                 value = uiState.note,
                 onValueChange = onNoteChange,
-                label = { Text(stringResource(R.string.label_note)) },
+                label = stringResource(R.string.add_edit_record_label_note),
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Done,
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                singleLine = false,
                 minLines = 2,
                 maxLines = 4,
-                modifier = Modifier.fillMaxWidth(),
                 enabled = !uiState.isLoading,
             )
 
             Text(
-                text = stringResource(R.string.section_title_recorded_at),
+                text = stringResource(R.string.add_edit_record_section_recorded_at),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -257,13 +273,153 @@ internal fun AddEditRecordContent(
                         strokeWidth = 2.dp,
                     )
                 } else {
-                    Text(stringResource(R.string.button_save))
+                    Text(stringResource(R.string.add_edit_record_button_save))
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
+}
+
+/**
+ * 日期選擇對話框。
+ *
+ * 使用者選取新日期後，保留 [recordedAt] 原有的時、分，合併成新的 epoch milliseconds 回傳。
+ *
+ * @param recordedAt 目前的記錄時間（epoch milliseconds），用來初始化選取日期與保留時間部分
+ * @param onConfirm 使用者確認選取後的回呼，傳入合併後的新時間（epoch milliseconds）
+ * @param onDismiss 使用者取消或關閉對話框的回呼
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RecordDatePickerDialog(
+    recordedAt: Long,
+    onConfirm: (newRecordedAt: Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val currentZdt = remember(recordedAt) {
+        Instant.ofEpochMilli(recordedAt).atZone(ZoneId.systemDefault())
+    }
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = DateUtils.toUtcMidnightMillis(recordedAt),
+    )
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val selectedDate = datePickerState.selectedDateMillis
+                    if (selectedDate != null) {
+                        onConfirm(
+                            DateUtils.combineDateAndTime(
+                                selectedDate,
+                                currentZdt.hour,
+                                currentZdt.minute,
+                            )
+                        )
+                    } else {
+                        onDismiss()
+                    }
+                },
+            ) { Text(stringResource(R.string.common_button_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_button_cancel)) }
+        },
+    ) {
+        DatePicker(state = datePickerState)
+    }
+}
+
+/**
+ * 時間選擇對話框。
+ *
+ * 使用者選取新時間後，保留 [recordedAt] 原有的日期部分，合併成新的 epoch milliseconds 回傳。
+ *
+ * @param recordedAt 目前的記錄時間（epoch milliseconds），用來初始化選取時間與保留日期部分
+ * @param onConfirm 使用者確認選取後的回呼，傳入合併後的新時間（epoch milliseconds）
+ * @param onDismiss 使用者取消或關閉對話框的回呼
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RecordTimePickerDialog(
+    recordedAt: Long,
+    onConfirm: (newRecordedAt: Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val currentZdt = remember(recordedAt) {
+        Instant.ofEpochMilli(recordedAt).atZone(ZoneId.systemDefault())
+    }
+    val timePickerState = rememberTimePickerState(
+        initialHour = currentZdt.hour,
+        initialMinute = currentZdt.minute,
+        is24Hour = true,
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.add_edit_record_dialog_time_title)) },
+        text = { TimePicker(state = timePickerState) },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(
+                        DateUtils.combineDateAndTime(
+                            DateUtils.toUtcMidnightMillis(recordedAt),
+                            timePickerState.hour,
+                            timePickerState.minute,
+                        )
+                    )
+                },
+            ) { Text(stringResource(R.string.common_button_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_button_cancel)) }
+        },
+    )
+}
+
+/**
+ * 通用的單行／多行文字輸入欄位（[OutlinedTextField] 的封裝）。
+ *
+ * @param value 當前輸入值
+ * @param onValueChange 輸入內容變更回呼
+ * @param label 欄位標籤文字
+ * @param keyboardActions 鍵盤動作回呼（如 Next、Done）
+ * @param modifier 外部傳入的 Modifier，預設填滿寬度
+ * @param enabled 是否允許輸入；儲存中時應設為 `false`
+ * @param keyboardType 鍵盤類型；預設 [KeyboardType.Number]（數字鍵盤）
+ * @param imeAction IME 動作按鈕類型；預設 [ImeAction.Next]
+ * @param singleLine 是否單行模式；預設 `true`
+ * @param minLines 最小顯示行數；預設 `1`
+ * @param maxLines 最大顯示行數；預設 `1`
+ */
+@Composable
+private fun RecordFormField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    keyboardActions: KeyboardActions,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    keyboardType: KeyboardType = KeyboardType.Number,
+    imeAction: ImeAction = ImeAction.Next,
+    singleLine: Boolean = true,
+    minLines: Int = 1,
+    maxLines: Int = 1,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        singleLine = singleLine,
+        minLines = minLines,
+        maxLines = maxLines,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
+        keyboardActions = keyboardActions,
+        modifier = modifier.fillMaxWidth(),
+        enabled = enabled,
+    )
 }
 
 @Preview(showBackground = true, name = "AddRecord")
