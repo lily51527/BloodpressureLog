@@ -105,6 +105,20 @@ class AddEditRecordViewModel @Inject constructor(
         _uiState.update { it.copy(recordedAt = value) }
     }
 
+    fun resetForm() {
+        _uiState.update {
+            it.copy(
+                systolic = "",
+                diastolic = "",
+                pulse = "",
+                note = "",
+                recordedAt = System.currentTimeMillis(),
+                isLoading = false,
+                errorMessage = null,
+            )
+        }
+    }
+
     fun save() {
         val state = _uiState.value
         val systolic = state.systolic.toIntOrNull()

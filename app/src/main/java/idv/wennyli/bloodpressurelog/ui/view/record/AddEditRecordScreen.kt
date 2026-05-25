@@ -1,5 +1,6 @@
 package idv.wennyli.bloodpressurelog.ui.view.record
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -40,7 +42,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -54,17 +60,27 @@ import java.time.ZoneId
 @Composable
 fun AddEditRecordScreen(
     onNavigateBack: () -> Unit,
+    stayOnScreen: Boolean = false,
     viewModel: AddEditRecordViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {
-        viewModel.savedSuccessfully.collect { onNavigateBack() }
+        viewModel.savedSuccessfully.collect {
+            Toast.makeText(context, context.getString(R.string.toast_save_success), Toast.LENGTH_SHORT).show()
+            if (stayOnScreen) {
+                viewModel.resetForm()
+            } else {
+                onNavigateBack()
+            }
+        }
     }
 
     AddEditRecordContent(
         uiState = uiState,
         onNavigateBack = onNavigateBack,
+        showNavigateBack = !stayOnScreen,
         onSystolicChange = viewModel::onSystolicChange,
         onDiastolicChange = viewModel::onDiastolicChange,
         onPulseChange = viewModel::onPulseChange,
@@ -79,6 +95,7 @@ fun AddEditRecordScreen(
 internal fun AddEditRecordContent(
     uiState: AddEditRecordUiState,
     onNavigateBack: () -> Unit,
+    showNavigateBack: Boolean = true,
     onSystolicChange: (String) -> Unit,
     onDiastolicChange: (String) -> Unit,
     onPulseChange: (String) -> Unit,
@@ -86,6 +103,7 @@ internal fun AddEditRecordContent(
     onRecordedAtChange: (Long) -> Unit,
     onSave: () -> Unit,
 ) {
+    val focusManager = LocalFocusManager.current
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
 
@@ -157,11 +175,13 @@ internal fun AddEditRecordContent(
             TopAppBar(
                 title = { Text(if (uiState.isEditMode) stringResource(R.string.screen_title_edit_record) else stringResource(R.string.screen_title_add_record)) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.content_description_navigate_back),
-                        )
+                    if (showNavigateBack) {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.content_description_navigate_back),
+                            )
+                        }
                     }
                 },
             )
@@ -182,7 +202,8 @@ internal fun AddEditRecordContent(
                 onValueChange = onSystolicChange,
                 label = { Text(stringResource(R.string.label_systolic)) },
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !uiState.isLoading,
             )
@@ -192,7 +213,8 @@ internal fun AddEditRecordContent(
                 onValueChange = onDiastolicChange,
                 label = { Text(stringResource(R.string.label_diastolic)) },
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !uiState.isLoading,
             )
@@ -202,7 +224,8 @@ internal fun AddEditRecordContent(
                 onValueChange = onPulseChange,
                 label = { Text(stringResource(R.string.label_pulse)) },
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !uiState.isLoading,
             )
@@ -213,6 +236,8 @@ internal fun AddEditRecordContent(
                 label = { Text(stringResource(R.string.label_note)) },
                 minLines = 2,
                 maxLines = 4,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !uiState.isLoading,
             )

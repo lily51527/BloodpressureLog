@@ -22,7 +22,7 @@
     <string name="content_description_add_record">新增紀錄</string>
     <string name="content_description_edit">編輯</string>
     <string name="content_description_delete">刪除</string>
-    <string name="record_list_empty">尚無紀錄，點擊右下角新增</string>
+    <string name="record_list_empty">尚無紀錄</string>
     <string name="dialog_title_delete_record">刪除紀錄</string>
     <string name="dialog_message_delete_record">確定要刪除這筆紀錄嗎？此操作無法復原。</string>
     <string name="error_delete_record_failed">刪除失敗，請稍後再試</string>
@@ -81,8 +81,12 @@
     <string name="forgot_password_success_message">密碼重設信已寄出，請查收信箱。</string>
 
     <!-- Bottom Navigation Labels -->
+    <string name="nav_label_add">新增</string>
     <string name="nav_label_records">紀錄</string>
     <string name="nav_label_trends">趨勢</string>
+
+    <!-- Toast Messages -->
+    <string name="toast_save_success">儲存完成</string>
 
     <!-- Trend Range Filter Labels -->
     <string name="trend_range_7_days">7天</string>

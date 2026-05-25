@@ -2,6 +2,7 @@ package idv.wennyli.bloodpressurelog.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -36,17 +37,18 @@ private const val ROUTE_LOGIN = "login"
 private const val ROUTE_REGISTER = "register"
 private const val ROUTE_EMAIL_VERIFICATION = "email_verification"
 private const val ROUTE_FORGOT_PASSWORD = "forgot_password"
+private const val ROUTE_ADD_RECORD = "add_record"
 private const val ROUTE_RECORD_LIST = "record_list"
 private const val ROUTE_TRENDS = "trends"
 private const val ROUTE_ADD_EDIT_RECORD = "add_edit_record"
 private const val ARG_RECORD_ID = "recordId"
 
-private val BOTTOM_NAV_ROUTES = setOf(ROUTE_RECORD_LIST, ROUTE_TRENDS)
+private val BOTTOM_NAV_ROUTES = setOf(ROUTE_ADD_RECORD, ROUTE_RECORD_LIST, ROUTE_TRENDS)
 
 @Composable
 fun AppNavigation(startLoggedIn: Boolean) {
     val navController = rememberNavController()
-    val startDestination = if (startLoggedIn) ROUTE_RECORD_LIST else ROUTE_LOGIN
+    val startDestination = if (startLoggedIn) ROUTE_ADD_RECORD else ROUTE_LOGIN
     val mainViewModel: MainViewModel = hiltViewModel()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -67,10 +69,21 @@ fun AppNavigation(startLoggedIn: Boolean) {
             if (currentRoute in BOTTOM_NAV_ROUTES) {
                 NavigationBar {
                     NavigationBarItem(
+                        selected = currentRoute == ROUTE_ADD_RECORD,
+                        onClick = {
+                            navController.navigate(ROUTE_ADD_RECORD) {
+                                popUpTo(ROUTE_ADD_RECORD) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        },
+                        icon = { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.nav_label_add)) },
+                        label = { Text(stringResource(R.string.nav_label_add)) },
+                    )
+                    NavigationBarItem(
                         selected = currentRoute == ROUTE_RECORD_LIST,
                         onClick = {
                             navController.navigate(ROUTE_RECORD_LIST) {
-                                popUpTo(ROUTE_RECORD_LIST) { inclusive = false }
+                                popUpTo(ROUTE_ADD_RECORD) { inclusive = false }
                                 launchSingleTop = true
                             }
                         },
@@ -81,7 +94,7 @@ fun AppNavigation(startLoggedIn: Boolean) {
                         selected = currentRoute == ROUTE_TRENDS,
                         onClick = {
                             navController.navigate(ROUTE_TRENDS) {
-                                popUpTo(ROUTE_RECORD_LIST) { inclusive = false }
+                                popUpTo(ROUTE_ADD_RECORD) { inclusive = false }
                                 launchSingleTop = true
                             }
                         },
@@ -102,7 +115,7 @@ fun AppNavigation(startLoggedIn: Boolean) {
             composable(ROUTE_LOGIN) {
                 LoginScreen(
                     onLoginSuccess = {
-                        navController.navigate(ROUTE_RECORD_LIST) {
+                        navController.navigate(ROUTE_ADD_RECORD) {
                             popUpTo(ROUTE_LOGIN) { inclusive = true }
                         }
                     },
@@ -151,15 +164,17 @@ fun AppNavigation(startLoggedIn: Boolean) {
                 )
             }
 
+            composable(ROUTE_ADD_RECORD) {
+                AddEditRecordScreen(
+                    stayOnScreen = true,
+                    onNavigateBack = {},
+                )
+            }
+
             composable(ROUTE_RECORD_LIST) {
                 RecordListScreen(
-                    onNavigateToAddEdit = { recordId ->
-                        val route = if (recordId != null) {
-                            "$ROUTE_ADD_EDIT_RECORD?$ARG_RECORD_ID=$recordId"
-                        } else {
-                            ROUTE_ADD_EDIT_RECORD
-                        }
-                        navController.navigate(route)
+                    onNavigateToEdit = { recordId ->
+                        navController.navigate("$ROUTE_ADD_EDIT_RECORD?$ARG_RECORD_ID=$recordId")
                     },
                 )
             }

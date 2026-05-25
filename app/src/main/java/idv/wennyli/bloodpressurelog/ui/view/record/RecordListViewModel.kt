@@ -37,9 +37,8 @@ class RecordListViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(RecordListUiState())
     val uiState: StateFlow<RecordListUiState> = _uiState.asStateFlow()
 
-    // null = add mode, non-null = recordId for edit mode
-    private val _navigateToAddEdit = MutableSharedFlow<String?>(extraBufferCapacity = 1)
-    val navigateToAddEdit: SharedFlow<String?> = _navigateToAddEdit.asSharedFlow()
+    private val _navigateToEdit = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val navigateToEdit: SharedFlow<String> = _navigateToEdit.asSharedFlow()
 
     init {
         observeRecords()
@@ -65,12 +64,8 @@ class RecordListViewModel @Inject constructor(
         }
     }
 
-    fun onAddRecord() {
-        viewModelScope.launch { _navigateToAddEdit.emit(null) }
-    }
-
     fun onEditRecord(id: String) {
-        viewModelScope.launch { _navigateToAddEdit.emit(id) }
+        viewModelScope.launch { _navigateToEdit.emit(id) }
     }
 
     fun signOut() {

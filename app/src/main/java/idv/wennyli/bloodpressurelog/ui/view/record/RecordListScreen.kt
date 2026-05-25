@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExitToApp
@@ -25,7 +24,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -58,14 +56,14 @@ import idv.wennyli.bloodpressurelog.utils.DateUtils
 
 @Composable
 fun RecordListScreen(
-    onNavigateToAddEdit: (recordId: String?) -> Unit,
+    onNavigateToEdit: (recordId: String) -> Unit,
     viewModel: RecordListViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {
-        viewModel.navigateToAddEdit.collect { recordId ->
-            onNavigateToAddEdit(recordId)
+        viewModel.navigateToEdit.collect { recordId ->
+            onNavigateToEdit(recordId)
         }
     }
 
@@ -95,7 +93,6 @@ fun RecordListScreen(
     RecordListContent(
         uiState = uiState,
         onSignOut = viewModel::signOut,
-        onAddRecord = viewModel::onAddRecord,
         onEditRecord = viewModel::onEditRecord,
         onDeleteRecord = { recordIdToDelete = it },
     )
@@ -106,7 +103,6 @@ fun RecordListScreen(
 internal fun RecordListContent(
     uiState: RecordListUiState,
     onSignOut: () -> Unit,
-    onAddRecord: () -> Unit,
     onEditRecord: (String) -> Unit,
     onDeleteRecord: (String) -> Unit,
 ) {
@@ -120,11 +116,6 @@ internal fun RecordListContent(
                     }
                 },
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onAddRecord) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(R.string.content_description_add_record))
-            }
         },
     ) { innerPadding ->
         Box(
@@ -169,7 +160,6 @@ internal fun RecordListContent(
                                 onDelete = { onDeleteRecord(record.id) },
                             )
                         }
-                        item { Spacer(modifier = Modifier.height(72.dp)) }
                     }
                 }
             }
@@ -299,7 +289,6 @@ private fun RecordListWithRecordsPreview() {
                 ),
             ),
             onSignOut = {},
-            onAddRecord = {},
             onEditRecord = {},
             onDeleteRecord = {},
         )
@@ -313,7 +302,6 @@ private fun RecordListEmptyPreview() {
         RecordListContent(
             uiState = RecordListUiState(isLoading = false, records = emptyList()),
             onSignOut = {},
-            onAddRecord = {},
             onEditRecord = {},
             onDeleteRecord = {},
         )
@@ -327,7 +315,6 @@ private fun RecordListLoadingPreview() {
         RecordListContent(
             uiState = RecordListUiState(isLoading = true),
             onSignOut = {},
-            onAddRecord = {},
             onEditRecord = {},
             onDeleteRecord = {},
         )
