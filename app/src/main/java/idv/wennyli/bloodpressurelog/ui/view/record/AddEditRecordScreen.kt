@@ -68,7 +68,11 @@ fun AddEditRecordScreen(
 
     LaunchedEffect(Unit) {
         viewModel.savedSuccessfully.collect {
-            Toast.makeText(context, context.getString(R.string.toast_save_success), Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                context.getString(R.string.toast_save_success),
+                Toast.LENGTH_SHORT
+            ).show()
             if (stayOnScreen) {
                 viewModel.resetForm()
             } else {
@@ -134,7 +138,9 @@ internal fun AddEditRecordContent(
                 ) { Text(stringResource(R.string.button_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.button_cancel)) }
+                TextButton(onClick = {
+                    showDatePicker = false
+                }) { Text(stringResource(R.string.button_cancel)) }
             },
         ) {
             DatePicker(state = datePickerState)
@@ -165,7 +171,9 @@ internal fun AddEditRecordContent(
                 ) { Text(stringResource(R.string.button_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { showTimePicker = false }) { Text(stringResource(R.string.button_cancel)) }
+                TextButton(onClick = {
+                    showTimePicker = false
+                }) { Text(stringResource(R.string.button_cancel)) }
             },
         )
     }
@@ -173,7 +181,13 @@ internal fun AddEditRecordContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (uiState.isEditMode) stringResource(R.string.screen_title_edit_record) else stringResource(R.string.screen_title_add_record)) },
+                title = {
+                    Text(
+                        if (uiState.isEditMode) stringResource(R.string.screen_title_edit_record) else stringResource(
+                            R.string.screen_title_add_record
+                        )
+                    )
+                },
                 navigationIcon = {
                     if (showNavigateBack) {
                         IconButton(onClick = onNavigateBack) {
@@ -197,48 +211,40 @@ internal fun AddEditRecordContent(
         ) {
             Spacer(modifier = Modifier.height(4.dp))
 
-            OutlinedTextField(
+            RecordFormField(
                 value = uiState.systolic,
                 onValueChange = onSystolicChange,
-                label = { Text(stringResource(R.string.label_systolic)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                label = stringResource(R.string.label_systolic),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-                modifier = Modifier.fillMaxWidth(),
                 enabled = !uiState.isLoading,
             )
 
-            OutlinedTextField(
+            RecordFormField(
                 value = uiState.diastolic,
                 onValueChange = onDiastolicChange,
-                label = { Text(stringResource(R.string.label_diastolic)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                label = stringResource(R.string.label_diastolic),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-                modifier = Modifier.fillMaxWidth(),
                 enabled = !uiState.isLoading,
             )
 
-            OutlinedTextField(
+            RecordFormField(
                 value = uiState.pulse,
                 onValueChange = onPulseChange,
-                label = { Text(stringResource(R.string.label_pulse)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                label = stringResource(R.string.label_pulse),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-                modifier = Modifier.fillMaxWidth(),
                 enabled = !uiState.isLoading,
             )
 
-            OutlinedTextField(
+            RecordFormField(
                 value = uiState.note,
                 onValueChange = onNoteChange,
-                label = { Text(stringResource(R.string.label_note)) },
+                label = stringResource(R.string.label_note),
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Done,
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                singleLine = false,
                 minLines = 2,
                 maxLines = 4,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                modifier = Modifier.fillMaxWidth(),
                 enabled = !uiState.isLoading,
             )
 
@@ -289,6 +295,34 @@ internal fun AddEditRecordContent(
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
+}
+
+@Composable
+private fun RecordFormField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    keyboardActions: KeyboardActions,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    keyboardType: KeyboardType = KeyboardType.Number,
+    imeAction: ImeAction = ImeAction.Next,
+    singleLine: Boolean = true,
+    minLines: Int = 1,
+    maxLines: Int = 1,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        singleLine = singleLine,
+        minLines = minLines,
+        maxLines = maxLines,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
+        keyboardActions = keyboardActions,
+        modifier = modifier.fillMaxWidth(),
+        enabled = enabled,
+    )
 }
 
 @Preview(showBackground = true, name = "AddRecord")
