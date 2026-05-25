@@ -72,8 +72,8 @@ fun RecordListScreen(
     if (recordIdToDelete != null) {
         AlertDialog(
             onDismissRequest = { recordIdToDelete = null },
-            title = { Text(stringResource(R.string.dialog_title_delete_record)) },
-            text = { Text(stringResource(R.string.dialog_message_delete_record)) },
+            title = { Text(stringResource(R.string.record_list_dialog_delete_title)) },
+            text = { Text(stringResource(R.string.record_list_dialog_delete_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -81,11 +81,11 @@ fun RecordListScreen(
                         recordIdToDelete = null
                     },
                 ) {
-                    Text(stringResource(R.string.button_delete), color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.record_list_button_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { recordIdToDelete = null }) { Text(stringResource(R.string.button_cancel)) }
+                TextButton(onClick = { recordIdToDelete = null }) { Text(stringResource(R.string.common_button_cancel)) }
             },
         )
     }
@@ -109,10 +109,10 @@ internal fun RecordListContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.screen_title_record_list)) },
+                title = { Text(stringResource(R.string.record_list_screen_title)) },
                 actions = {
                     IconButton(onClick = onSignOut) {
-                        Icon(imageVector = Icons.Default.ExitToApp, contentDescription = stringResource(R.string.content_description_sign_out))
+                        Icon(imageVector = Icons.Default.ExitToApp, contentDescription = stringResource(R.string.record_list_cd_sign_out))
                     }
                 },
             )
@@ -223,14 +223,14 @@ private fun RecordCard(
             IconButton(onClick = onEdit) {
                 Icon(
                     imageVector = Icons.Default.Edit,
-                    contentDescription = stringResource(R.string.content_description_edit),
+                    contentDescription = stringResource(R.string.record_list_cd_edit),
                     modifier = Modifier.size(20.dp),
                 )
             }
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = stringResource(R.string.content_description_delete),
+                    contentDescription = stringResource(R.string.record_list_cd_delete),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.error,
                 )
@@ -248,10 +248,10 @@ private fun BloodPressureLevel.color(): Color = when (this) {
 
 @Composable
 private fun TimeSlot.displayName(): String = when (this) {
-    TimeSlot.MORNING -> stringResource(R.string.time_slot_morning)
-    TimeSlot.AFTERNOON -> stringResource(R.string.time_slot_afternoon)
-    TimeSlot.EVENING -> stringResource(R.string.time_slot_evening)
-    TimeSlot.NIGHT -> stringResource(R.string.time_slot_night)
+    TimeSlot.MORNING -> stringResource(R.string.record_list_time_slot_morning)
+    TimeSlot.AFTERNOON -> stringResource(R.string.record_list_time_slot_afternoon)
+    TimeSlot.EVENING -> stringResource(R.string.record_list_time_slot_evening)
+    TimeSlot.NIGHT -> stringResource(R.string.record_list_time_slot_night)
 }
 
 @Preview(showBackground = true, name = "RecordList - With Records")

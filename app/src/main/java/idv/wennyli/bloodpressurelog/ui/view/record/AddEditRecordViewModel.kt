@@ -72,14 +72,14 @@ class AddEditRecordViewModel @Inject constructor(
                     }
                 } else {
                     _uiState.update {
-                        it.copy(isLoading = false, errorMessage = resourceProvider.getString(R.string.error_record_not_found))
+                        it.copy(isLoading = false, errorMessage = resourceProvider.getString(R.string.add_edit_record_error_not_found))
                     }
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Timber.e(e, "[AddEditRecordViewModel] loadRecord failed")
                 _uiState.update {
-                    it.copy(isLoading = false, errorMessage = e.message ?: resourceProvider.getString(R.string.error_record_load_failed))
+                    it.copy(isLoading = false, errorMessage = e.message ?: resourceProvider.getString(R.string.add_edit_record_error_load_failed))
                 }
             }
         }
@@ -128,7 +128,7 @@ class AddEditRecordViewModel @Inject constructor(
         if (systolic == null || diastolic == null || pulse == null ||
             systolic <= 0 || diastolic <= 0 || pulse <= 0
         ) {
-            _uiState.update { it.copy(errorMessage = resourceProvider.getString(R.string.error_record_invalid_input)) }
+            _uiState.update { it.copy(errorMessage = resourceProvider.getString(R.string.add_edit_record_error_invalid_input)) }
             return
         }
 
@@ -150,7 +150,7 @@ class AddEditRecordViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = result.message ?: resourceProvider.getString(R.string.error_record_save_failed),
+                            errorMessage = result.message ?: resourceProvider.getString(R.string.add_edit_record_error_save_failed),
                         )
                     }
                 }

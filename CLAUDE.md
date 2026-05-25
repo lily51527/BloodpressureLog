@@ -15,9 +15,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 idv.wennyli.bloodpressurelog/
 ├── data/
-│   ├── model/       # Data classes (BloodPressureRecord, TimeSlot, BloodPressureLevel, DataState)
-│   └── repository/  # Repository interfaces & implementations
+│   ├── model/       # Data classes (BloodPressureRecord, TimeSlot, BloodPressureLevel, DataState, AuthException)
+│   └── repository/  # Repository interfaces & implementations (BloodPressureRepository, AuthRepository)
 ├── di/              # Hilt modules (AppModule 負責 Firebase + Repository 綁定)
+├── domain/
+│   └── usecase/     # BuildChartDataUseCase（趨勢圖表資料轉換）、SaveBloodPressureRecordUseCase（新增/更新判斷）
 ├── ui/
 │   ├── navigation/  # AppNavigation（含 BottomNav + NavHost）
 │   ├── view/        # Feature screens，每個 feature 各有 ViewModel + Composable
@@ -26,7 +28,7 @@ idv.wennyli.bloodpressurelog/
 │   │   ├── record/  # 血壓紀錄列表 + 新增/編輯
 │   │   └── trends/  # 趨勢圖表（Vico 折線圖）
 │   └── theme/       # Material3 color, typography, theme
-└── utils/           # DateUtils, FirebaseAuthErrorMapper, FirestorePaths
+└── utils/           # DateUtils, FirebaseAuthErrorMapper, FirestorePaths, ResourceProvider
 ```
 
 ### Key Tech Stack
@@ -109,7 +111,20 @@ sealed interface DataState<out T> {
 ### 重要領域邏輯
 
 - `BloodPressureRecord.timeSlot`：extension property，依 `recordedAt` 小時判斷時段（早上 6–11、下午 12–17、晚上 18–23、夜間其他）
-- `TrendsViewModel.buildChartData`：將 records 依日期分組，計算各日平均值，x 軸為相對於 startDate 的 dayIndex
+- `BuildChartDataUseCase`：將 records 依日期分組、計算各日平均值，x 軸為相對於 startDate 的 dayIndex，並產生對應天數的 x 軸標籤（格式 `M/d`）
+- `SaveBloodPressureRecordUseCase`：依 `recordId` 是否為 null 決定呼叫 `addRecord` 或 `updateRecord`，例外統一轉為 `SaveRecordResult.Error`
+- `AuthException`：`AuthRepositoryImpl` 將 Firebase 例外轉換為本地化訊息後以此包裝拋出，ViewModel 直接取用 `message` 顯示
+
+### TrendsViewModel 資料流設計
+
+`TrendsViewModel` 以三個獨立 `MutableStateFlow` 合流，任一異動都會觸發 `uiState` 重算：
+
+```kotlin
+combine(_recordsState, _selectedRange, _selectedMetric) { state, range, metric -> ... }
+    .stateIn(started = SharingStarted.Eagerly, ...)
+```
+
+`TrendsUiState` 的 `isLoading` **預設值為 `true`**。在 Preview 或測試中手動建構 `TrendsUiState` 時，若只傳 `errorMessage` 卻不傳 `isLoading = false`，畫面會顯示 Loading 而非 Error 狀態。
 
 ### Vico 圖表注意事項
 

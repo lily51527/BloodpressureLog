@@ -34,8 +34,8 @@ class AddEditRecordViewModelTest {
 
     @BeforeTest
     fun setUp() {
-        every { mockResourceProvider.getString(R.string.error_record_invalid_input) } returns "請輸入有效的正整數數值"
-        every { mockResourceProvider.getString(R.string.error_record_not_found) } returns "找不到紀錄"
+        every { mockResourceProvider.getString(R.string.add_edit_record_error_invalid_input) } returns "請輸入有效的正整數數值"
+        every { mockResourceProvider.getString(R.string.add_edit_record_error_not_found) } returns "找不到紀錄"
     }
 
     private fun addModeViewModel() = AddEditRecordViewModel(
@@ -255,7 +255,7 @@ class AddEditRecordViewModelTest {
     /** UseCase 回傳 Error(null) 時，應顯示 fallback 錯誤訊息。 */
     @Test
     fun `save error with null message shows fallback error`() = runTest {
-        every { mockResourceProvider.getString(R.string.error_record_save_failed) } returns "儲存失敗"
+        every { mockResourceProvider.getString(R.string.add_edit_record_error_save_failed) } returns "儲存失敗"
         coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Error(null)
         val viewModel = addModeViewModel()
         viewModel.onSystolicChange("120")
@@ -322,7 +322,7 @@ class AddEditRecordViewModelTest {
     /** 載入紀錄時例外的 message 為 null，應顯示 fallback 錯誤訊息。 */
     @Test
     fun `load record error with null exception message shows fallback error`() = runTest {
-        every { mockResourceProvider.getString(R.string.error_record_load_failed) } returns "載入失敗"
+        every { mockResourceProvider.getString(R.string.add_edit_record_error_load_failed) } returns "載入失敗"
         coEvery { mockRepository.getRecord("record-1") } throws RuntimeException(null as String?)
 
         val viewModel = editModeViewModel("record-1")

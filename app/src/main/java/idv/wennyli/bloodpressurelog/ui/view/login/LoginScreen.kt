@@ -92,7 +92,7 @@ internal fun LoginScreenContent(
             OutlinedTextField(
                 value = uiState.email,
                 onValueChange = onEmailChange,
-                label = { Text(stringResource(R.string.label_email)) },
+                label = { Text(stringResource(R.string.common_label_email)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
@@ -106,7 +106,7 @@ internal fun LoginScreenContent(
             OutlinedTextField(
                 value = uiState.password,
                 onValueChange = onPasswordChange,
-                label = { Text(stringResource(R.string.label_password)) },
+                label = { Text(stringResource(R.string.common_label_password)) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
@@ -140,7 +140,7 @@ internal fun LoginScreenContent(
                         strokeWidth = 2.dp,
                     )
                 } else {
-                    Text(stringResource(R.string.button_login))
+                    Text(stringResource(R.string.login_button_login))
                 }
             }
 
@@ -151,15 +151,15 @@ internal fun LoginScreenContent(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !uiState.isLoading,
                 ) {
-                    Text(stringResource(R.string.button_anonymous_login_debug))
+                    Text(stringResource(R.string.login_button_anonymous_debug))
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
             TextButton(onClick = onNavigateToForgotPassword) {
-                Text(stringResource(R.string.link_forgot_password))
+                Text(stringResource(R.string.login_link_forgot_password))
             }
             TextButton(onClick = onNavigateToRegister) {
-                Text(stringResource(R.string.link_register))
+                Text(stringResource(R.string.login_link_register))
             }
         }
     }

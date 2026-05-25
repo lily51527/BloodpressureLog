@@ -74,7 +74,7 @@ internal fun RegisterScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = stringResource(R.string.screen_title_register),
+                text = stringResource(R.string.register_screen_title),
                 style = MaterialTheme.typography.headlineMedium,
             )
             Spacer(modifier = Modifier.height(32.dp))
@@ -82,7 +82,7 @@ internal fun RegisterScreenContent(
             OutlinedTextField(
                 value = uiState.email,
                 onValueChange = onEmailChange,
-                label = { Text(stringResource(R.string.label_email)) },
+                label = { Text(stringResource(R.string.common_label_email)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
@@ -96,7 +96,7 @@ internal fun RegisterScreenContent(
             OutlinedTextField(
                 value = uiState.password,
                 onValueChange = onPasswordChange,
-                label = { Text(stringResource(R.string.label_password)) },
+                label = { Text(stringResource(R.string.common_label_password)) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
@@ -111,7 +111,7 @@ internal fun RegisterScreenContent(
             OutlinedTextField(
                 value = uiState.confirmPassword,
                 onValueChange = onConfirmPasswordChange,
-                label = { Text(stringResource(R.string.label_confirm_password)) },
+                label = { Text(stringResource(R.string.register_label_confirm_password)) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
@@ -145,13 +145,13 @@ internal fun RegisterScreenContent(
                         strokeWidth = 2.dp,
                     )
                 } else {
-                    Text(stringResource(R.string.button_register))
+                    Text(stringResource(R.string.register_button_register))
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
 
             TextButton(onClick = onNavigateToLogin) {
-                Text(stringResource(R.string.link_already_have_account))
+                Text(stringResource(R.string.register_link_already_have_account))
             }
         }
     }

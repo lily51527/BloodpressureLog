@@ -80,7 +80,7 @@ class RecordListViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 Timber.e(e, "[RecordListViewModel] deleteRecord failed")
                 _uiState.update {
-                    it.copy(errorMessage = resourceProvider.getString(R.string.error_delete_record_failed))
+                    it.copy(errorMessage = resourceProvider.getString(R.string.record_list_error_delete_failed))
                 }
             }
         }

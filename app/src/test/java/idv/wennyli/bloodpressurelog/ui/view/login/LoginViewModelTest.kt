@@ -151,7 +151,7 @@ class LoginViewModelTest {
     fun `signInWithEmail sets errorMessage and clears isLoading when currentUser is null after sign in`() =
         runTest {
             every {
-                mockResourceProvider.getString(R.string.error_sign_in_failed)
+                mockResourceProvider.getString(R.string.login_error_sign_in_failed)
             } returns "登入失敗，請稍後再試"
             every { mockAuthRepository.currentUser } returns null
             coEvery { mockAuthRepository.signInWithEmail(any(), any()) } just Runs

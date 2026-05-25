@@ -66,7 +66,7 @@ fun AddEditRecordScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    val saveSuccessMessage = stringResource(R.string.toast_save_success)
+    val saveSuccessMessage = stringResource(R.string.add_edit_record_message_save_success)
 
     LaunchedEffect(Unit) {
         viewModel.savedSuccessfully.collect {
@@ -139,8 +139,8 @@ internal fun AddEditRecordContent(
             TopAppBar(
                 title = {
                     Text(
-                        if (uiState.isEditMode) stringResource(R.string.screen_title_edit_record) else stringResource(
-                            R.string.screen_title_add_record
+                        if (uiState.isEditMode) stringResource(R.string.add_edit_record_screen_title_edit) else stringResource(
+                            R.string.add_edit_record_screen_title_add
                         )
                     )
                 },
@@ -149,7 +149,7 @@ internal fun AddEditRecordContent(
                         IconButton(onClick = onNavigateBack) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.content_description_navigate_back),
+                                contentDescription = stringResource(R.string.add_edit_record_cd_navigate_back),
                             )
                         }
                     }
@@ -170,7 +170,7 @@ internal fun AddEditRecordContent(
             RecordFormField(
                 value = uiState.systolic,
                 onValueChange = onSystolicChange,
-                label = stringResource(R.string.label_systolic),
+                label = stringResource(R.string.add_edit_record_label_systolic),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                 enabled = !uiState.isLoading,
             )
@@ -178,7 +178,7 @@ internal fun AddEditRecordContent(
             RecordFormField(
                 value = uiState.diastolic,
                 onValueChange = onDiastolicChange,
-                label = stringResource(R.string.label_diastolic),
+                label = stringResource(R.string.add_edit_record_label_diastolic),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                 enabled = !uiState.isLoading,
             )
@@ -186,7 +186,7 @@ internal fun AddEditRecordContent(
             RecordFormField(
                 value = uiState.pulse,
                 onValueChange = onPulseChange,
-                label = stringResource(R.string.label_pulse),
+                label = stringResource(R.string.add_edit_record_label_pulse),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                 enabled = !uiState.isLoading,
             )
@@ -194,7 +194,7 @@ internal fun AddEditRecordContent(
             RecordFormField(
                 value = uiState.note,
                 onValueChange = onNoteChange,
-                label = stringResource(R.string.label_note),
+                label = stringResource(R.string.add_edit_record_label_note),
                 keyboardType = KeyboardType.Text,
                 imeAction = ImeAction.Done,
                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
@@ -205,7 +205,7 @@ internal fun AddEditRecordContent(
             )
 
             Text(
-                text = stringResource(R.string.section_title_recorded_at),
+                text = stringResource(R.string.add_edit_record_section_recorded_at),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -244,7 +244,7 @@ internal fun AddEditRecordContent(
                         strokeWidth = 2.dp,
                     )
                 } else {
-                    Text(stringResource(R.string.button_save))
+                    Text(stringResource(R.string.add_edit_record_button_save))
                 }
             }
 
@@ -284,10 +284,10 @@ private fun RecordDatePickerDialog(
                         onDismiss()
                     }
                 },
-            ) { Text(stringResource(R.string.button_confirm)) }
+            ) { Text(stringResource(R.string.common_button_confirm)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.button_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_button_cancel)) }
         },
     ) {
         DatePicker(state = datePickerState)
@@ -311,7 +311,7 @@ private fun RecordTimePickerDialog(
     )
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.dialog_title_time_picker)) },
+        title = { Text(stringResource(R.string.add_edit_record_dialog_time_title)) },
         text = { TimePicker(state = timePickerState) },
         confirmButton = {
             TextButton(
@@ -324,10 +324,10 @@ private fun RecordTimePickerDialog(
                         )
                     )
                 },
-            ) { Text(stringResource(R.string.button_confirm)) }
+            ) { Text(stringResource(R.string.common_button_confirm)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.button_cancel)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_button_cancel)) }
         },
     )
 }

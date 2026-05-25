@@ -54,7 +54,7 @@ class RegisterViewModel @Inject constructor(
         when {
             state.email.isBlank() -> {
                 _uiState.update {
-                    it.copy(errorMessage = resourceProvider.getString(R.string.error_email_required))
+                    it.copy(errorMessage = resourceProvider.getString(R.string.register_error_email_required))
                 }
                 return
             }
@@ -66,7 +66,7 @@ class RegisterViewModel @Inject constructor(
             }
             state.password != state.confirmPassword -> {
                 _uiState.update {
-                    it.copy(errorMessage = resourceProvider.getString(R.string.error_passwords_do_not_match))
+                    it.copy(errorMessage = resourceProvider.getString(R.string.register_error_passwords_mismatch))
                 }
                 return
             }

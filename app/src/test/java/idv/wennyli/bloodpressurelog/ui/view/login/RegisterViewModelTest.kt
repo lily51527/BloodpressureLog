@@ -72,7 +72,7 @@ class RegisterViewModelTest {
     @Test
     fun `register sets errorMessage when passwords do not match`() {
         every {
-            mockResourceProvider.getString(R.string.error_passwords_do_not_match)
+            mockResourceProvider.getString(R.string.register_error_passwords_mismatch)
         } returns "兩次輸入的密碼不一致"
         viewModel.onEmailChange("user@example.com")
         viewModel.onPasswordChange("abc123")
@@ -124,7 +124,7 @@ class RegisterViewModelTest {
     @Test
     fun `onEmailChange clears pre-existing errorMessage`() {
         every {
-            mockResourceProvider.getString(R.string.error_email_required)
+            mockResourceProvider.getString(R.string.register_error_email_required)
         } returns "請輸入 Email"
         viewModel.register()
 
@@ -140,7 +140,7 @@ class RegisterViewModelTest {
     @Test
     fun `onPasswordChange clears pre-existing errorMessage`() {
         every {
-            mockResourceProvider.getString(R.string.error_email_required)
+            mockResourceProvider.getString(R.string.register_error_email_required)
         } returns "請輸入 Email"
         viewModel.register()
 
@@ -156,7 +156,7 @@ class RegisterViewModelTest {
     @Test
     fun `onConfirmPasswordChange clears pre-existing errorMessage`() {
         every {
-            mockResourceProvider.getString(R.string.error_email_required)
+            mockResourceProvider.getString(R.string.register_error_email_required)
         } returns "請輸入 Email"
         viewModel.register()
 
@@ -189,7 +189,7 @@ class RegisterViewModelTest {
     @Test
     fun `register sets errorMessage when email is blank`() {
         every {
-            mockResourceProvider.getString(R.string.error_email_required)
+            mockResourceProvider.getString(R.string.register_error_email_required)
         } returns "請輸入 Email"
         // email 保持初始值 ""，password 設為合法值
         viewModel.onPasswordChange("secret123")
