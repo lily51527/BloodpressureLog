@@ -16,6 +16,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
@@ -56,11 +57,31 @@ class TrendsViewModelTest {
         assertThat(viewModel.uiState.value.isLoading).isTrue()
     }
 
+    /** Loading 狀態下呼叫 [TrendsViewModel.onRangeChange]，[TrendsUiState.selectedRange] 應立即更新，且維持 loading 中。 */
+    @Test
+    fun `onRangeChange while loading updates selectedRange`() {
+        val viewModel = createViewModel()
+
+        assertThat(viewModel.uiState.value.isLoading).isTrue()
+
+        viewModel.onRangeChange(TrendRange.DAYS_30)
+
+        val state = viewModel.uiState.value
+        assertThat(state.selectedRange).isEqualTo(TrendRange.DAYS_30)
+        assertThat(state.isLoading).isTrue()
+    }
+
     /** UseCase 回傳空圖表資料點時，[TrendsUiState.isEmpty] 應為 true，且無 loading 與 errorMessage。 */
     @Test
     fun `success with no chart points sets isEmpty true`() {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(emptyList()))
-        every { mockBuildChartDataUseCase(any(), any(), any()) } returns (emptyList<Pair<Float, Float>>() to emptyList())
+        every {
+            mockBuildChartDataUseCase(
+                any(),
+                any(),
+                any()
+            )
+        } returns (emptyList<Pair<Float, Float>>() to emptyList())
 
         val viewModel = createViewModel()
 
@@ -74,13 +95,28 @@ class TrendsViewModelTest {
     @Test
     fun `error state sets errorMessage`() {
         every { mockRepository.observeRecords() } returns
-            flowOf(DataState.Error(RuntimeException("error"), "載入失敗"))
+                flowOf(DataState.Error(RuntimeException("error"), "載入失敗"))
 
         val viewModel = createViewModel()
 
         val state = viewModel.uiState.value
         assertThat(state.isLoading).isFalse()
         assertThat(state.errorMessage).isEqualTo("載入失敗")
+    }
+
+    /** [DataState.Error] 狀態下呼叫 [TrendsViewModel.onRangeChange]，errorMessage 應保留，且 selectedRange 應正確更新。 */
+    @Test
+    fun `error state preserves errorMessage when selectedRange changes`() {
+        every { mockRepository.observeRecords() } returns
+                flowOf(DataState.Error(RuntimeException("error"), "載入失敗"))
+
+        val viewModel = createViewModel()
+        viewModel.onRangeChange(TrendRange.DAYS_14)
+
+        val state = viewModel.uiState.value
+        assertThat(state.errorMessage).isEqualTo("載入失敗")
+        assertThat(state.selectedRange).isEqualTo(TrendRange.DAYS_14)
+        assertThat(state.isLoading).isFalse()
     }
 
     /**
@@ -95,14 +131,16 @@ class TrendsViewModelTest {
             record(130, 85, 72, today.minusDays(1)),
         )
         val fakePoints = listOf(5f to 120f, 6f to 130f)
+        val fakeLabels = listOf("1/1", "1/2")
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(records))
-        every { mockBuildChartDataUseCase(any(), any(), any()) } returns (fakePoints to emptyList())
+        every { mockBuildChartDataUseCase(any(), any(), any()) } returns (fakePoints to fakeLabels)
 
         val viewModel = createViewModel()
 
         val state = viewModel.uiState.value
         assertThat(state.isEmpty).isFalse()
         assertThat(state.chartPoints).hasSize(2)
+        assertThat(state.xLabels).hasSize(2)
     }
 
     /**
@@ -116,9 +154,9 @@ class TrendsViewModelTest {
         val records = listOf(record(120, 80, 70, today))
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(records))
         every { mockBuildChartDataUseCase(any(), TrendRange.DAYS_7, any()) } returns
-            (listOf(6f to 120f) to List(7) { "" })
+                (listOf(6f to 120f) to List(7) { "" })
         every { mockBuildChartDataUseCase(any(), TrendRange.DAYS_14, any()) } returns
-            (listOf(6f to 120f) to List(14) { "" })
+                (listOf(6f to 120f) to List(14) { "" })
 
         val viewModel = createViewModel()
         viewModel.onRangeChange(TrendRange.DAYS_14)
@@ -126,6 +164,33 @@ class TrendsViewModelTest {
         val state = viewModel.uiState.value
         assertThat(state.selectedRange).isEqualTo(TrendRange.DAYS_14)
         assertThat(state.xLabels).hasSize(14)
+    }
+
+    /**
+     * Repository Flow 從 Loading 轉為 Success 時，[TrendsUiState] 應從 loading 狀態正確轉換為顯示圖表資料。
+     * (ViewModel 的 init 能不能持續監聽 Flow 的變化)
+     */
+    @Test
+    fun `records flow transitions from loading to success`() = runTest {
+        val recordsFlow = MutableStateFlow<DataState<List<BloodPressureRecord>>>(DataState.Loading)
+        every { mockRepository.observeRecords() } returns recordsFlow
+        every {
+            mockBuildChartDataUseCase(
+                any(),
+                any(),
+                any()
+            )
+        } returns (listOf(0f to 120f) to emptyList())
+
+        val viewModel = createViewModel()
+        assertThat(viewModel.uiState.value.isLoading).isTrue()
+
+        recordsFlow.value = DataState.Success(listOf(record(120, 80, 70, LocalDate.now())))
+
+        val state = viewModel.uiState.value
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.chartPoints).hasSize(1)
+        assertThat(state.isEmpty).isFalse()
     }
 
     /**
@@ -139,9 +204,9 @@ class TrendsViewModelTest {
         val records = listOf(record(120, 80, 70, today))
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(records))
         every { mockBuildChartDataUseCase(any(), any(), TrendMetric.SYSTOLIC) } returns
-            (listOf(6f to 120f) to emptyList())
+                (listOf(6f to 120f) to emptyList())
         every { mockBuildChartDataUseCase(any(), any(), TrendMetric.DIASTOLIC) } returns
-            (listOf(6f to 80f) to emptyList())
+                (listOf(6f to 80f) to emptyList())
 
         val viewModel = createViewModel()
         viewModel.onMetricChange(TrendMetric.DIASTOLIC)
