@@ -10,6 +10,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import timber.log.Timber
 import javax.inject.Inject
 
 class AuthRepositoryImpl @Inject constructor(
@@ -30,6 +31,7 @@ class AuthRepositoryImpl @Inject constructor(
         try {
             auth.signInWithEmailAndPassword(email, password).await()
         } catch (e: Exception) {
+            Timber.e(e, "signInWithEmail failed")
             throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
     }
@@ -38,6 +40,7 @@ class AuthRepositoryImpl @Inject constructor(
         try {
             auth.signInAnonymously().await()
         } catch (e: Exception) {
+            Timber.e(e, "signInAnonymously failed")
             throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
     }
@@ -51,6 +54,7 @@ class AuthRepositoryImpl @Inject constructor(
             auth.createUserWithEmailAndPassword(email, password).await()
             auth.currentUser?.sendEmailVerification()
         } catch (e: Exception) {
+            Timber.e(e, "registerWithEmail failed")
             throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
     }
@@ -61,6 +65,7 @@ class AuthRepositoryImpl @Inject constructor(
         try {
             user.sendEmailVerification().await()
         } catch (e: Exception) {
+            Timber.e(e, "sendEmailVerification failed")
             throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
     }
@@ -69,6 +74,7 @@ class AuthRepositoryImpl @Inject constructor(
         try {
             auth.sendPasswordResetEmail(email).await()
         } catch (e: Exception) {
+            Timber.e(e, "sendPasswordResetEmail failed")
             throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
     }

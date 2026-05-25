@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 data class RegisterUiState(
@@ -76,6 +77,7 @@ class RegisterViewModel @Inject constructor(
                 authRepository.registerWithEmail(state.email, state.password)
                 _navigateToEmailVerification.emit(Unit)
             } catch (e: Exception) {
+                Timber.e(e, "register failed")
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "") }
             }
         }

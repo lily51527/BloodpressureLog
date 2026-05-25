@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 data class RecordListUiState(
@@ -80,6 +81,7 @@ class RecordListViewModel @Inject constructor(
             try {
                 repository.deleteRecord(id)
             } catch (e: Exception) {
+                Timber.e(e, "deleteRecord failed")
                 _uiState.update {
                     it.copy(errorMessage = resourceProvider.getString(R.string.error_delete_record_failed))
                 }

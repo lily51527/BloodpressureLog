@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 data class LoginUiState(
@@ -71,6 +72,7 @@ class LoginViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
+                Timber.e(e, "signInWithEmail failed")
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "") }
             }
         }
@@ -83,6 +85,7 @@ class LoginViewModel @Inject constructor(
                 authRepository.signInAnonymously()
                 _navigateToMain.emit(Unit)
             } catch (e: Exception) {
+                Timber.e(e, "signInAnonymously failed")
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "") }
             }
         }
