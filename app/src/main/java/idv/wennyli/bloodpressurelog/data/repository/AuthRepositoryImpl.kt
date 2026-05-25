@@ -6,6 +6,7 @@ import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.data.model.AuthException
 import idv.wennyli.bloodpressurelog.utils.ResourceProvider
 import idv.wennyli.bloodpressurelog.utils.toAuthErrorStringRes
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -31,7 +32,8 @@ class AuthRepositoryImpl @Inject constructor(
         try {
             auth.signInWithEmailAndPassword(email, password).await()
         } catch (e: Exception) {
-            Timber.e(e, "signInWithEmail failed")
+            if (e is CancellationException) throw e
+            Timber.e(e, "[AuthRepositoryImpl] signInWithEmail failed")
             throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
     }
@@ -40,7 +42,8 @@ class AuthRepositoryImpl @Inject constructor(
         try {
             auth.signInAnonymously().await()
         } catch (e: Exception) {
-            Timber.e(e, "signInAnonymously failed")
+            if (e is CancellationException) throw e
+            Timber.e(e, "[AuthRepositoryImpl] signInAnonymously failed")
             throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
     }
@@ -54,7 +57,8 @@ class AuthRepositoryImpl @Inject constructor(
             auth.createUserWithEmailAndPassword(email, password).await()
             auth.currentUser?.sendEmailVerification()
         } catch (e: Exception) {
-            Timber.e(e, "registerWithEmail failed")
+            if (e is CancellationException) throw e
+            Timber.e(e, "[AuthRepositoryImpl] registerWithEmail failed")
             throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
     }
@@ -65,7 +69,8 @@ class AuthRepositoryImpl @Inject constructor(
         try {
             user.sendEmailVerification().await()
         } catch (e: Exception) {
-            Timber.e(e, "sendEmailVerification failed")
+            if (e is CancellationException) throw e
+            Timber.e(e, "[AuthRepositoryImpl] sendEmailVerification failed")
             throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
     }
@@ -74,7 +79,8 @@ class AuthRepositoryImpl @Inject constructor(
         try {
             auth.sendPasswordResetEmail(email).await()
         } catch (e: Exception) {
-            Timber.e(e, "sendPasswordResetEmail failed")
+            if (e is CancellationException) throw e
+            Timber.e(e, "[AuthRepositoryImpl] sendPasswordResetEmail failed")
             throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
     }
