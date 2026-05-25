@@ -9,14 +9,16 @@ import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
 import idv.wennyli.bloodpressurelog.utils.ResourceProvider
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -25,6 +27,8 @@ data class RecordListUiState(
     val records: List<BloodPressureRecord> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
+    val filter: RecordFilter = RecordFilter.default(),
+    val isDateRangeDialogVisible: Boolean = false,
 )
 
 @HiltViewModel
@@ -37,6 +41,8 @@ class RecordListViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(RecordListUiState())
     val uiState: StateFlow<RecordListUiState> = _uiState.asStateFlow()
 
+    private val _filter = MutableStateFlow(RecordFilter.default())
+
     private val _navigateToEdit = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val navigateToEdit: SharedFlow<String> = _navigateToEdit.asSharedFlow()
 
@@ -46,22 +52,37 @@ class RecordListViewModel @Inject constructor(
 
     private fun observeRecords() {
         viewModelScope.launch {
-            repository.observeRecords().collect { state ->
+            _filter.flatMapLatest { filter ->
+                repository.observeRecords(filter.startMs, filter.endMs).map { it to filter }
+            }.collect { (state, filter) ->
                 when (state) {
-                    DataState.Loading -> _uiState.update { it.copy(isLoading = true) }
+                    DataState.Loading -> _uiState.update { it.copy(isLoading = true, filter = filter) }
                     is DataState.Success -> _uiState.update {
                         it.copy(
                             records = state.data.sortedByDescending { it.recordedAt },
                             isLoading = false,
                             errorMessage = null,
+                            filter = filter,
                         )
                     }
                     is DataState.Error -> _uiState.update {
-                        it.copy(isLoading = false, errorMessage = state.message)
+                        it.copy(isLoading = false, errorMessage = state.message, filter = filter)
                     }
                 }
             }
         }
+    }
+
+    fun onDateRangeConfirmed(startMs: Long, endMs: Long) {
+        _filter.value = RecordFilter(startMs = startMs, endMs = endMs)
+    }
+
+    fun onShowDateRangeDialog() {
+        _uiState.update { it.copy(isDateRangeDialogVisible = true) }
+    }
+
+    fun onDismissDateRangeDialog() {
+        _uiState.update { it.copy(isDateRangeDialogVisible = false) }
     }
 
     fun onEditRecord(id: String) {
