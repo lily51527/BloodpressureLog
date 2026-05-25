@@ -13,6 +13,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import timber.log.Timber
 import javax.inject.Inject
 
 class BloodPressureRepositoryImpl @Inject constructor(
@@ -96,6 +97,7 @@ private fun com.google.firebase.firestore.DocumentSnapshot.toBloodPressureRecord
             updatedAt = getTimestamp("updatedAt")?.toEpochMillis() ?: System.currentTimeMillis(),
         )
     } catch (e: Exception) {
+        Timber.e(e, "toBloodPressureRecord failed, documentId=$id")
         null
     }
 
