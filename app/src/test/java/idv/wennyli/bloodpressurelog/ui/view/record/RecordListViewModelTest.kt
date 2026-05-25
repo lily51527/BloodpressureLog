@@ -14,6 +14,7 @@ import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
+import idv.wennyli.bloodpressurelog.utils.DateUtils
 import idv.wennyli.bloodpressurelog.utils.ResourceProvider
 import io.mockk.Runs
 import io.mockk.coEvery
@@ -45,7 +46,7 @@ class RecordListViewModelTest {
 
     @BeforeTest
     fun setUp() {
-        every { mockRepository.observeRecords() } returns flowOf(DataState.Loading)
+        every { mockRepository.observeRecords(any(), any()) } returns flowOf(DataState.Loading)
         every { mockResourceProvider.getString(R.string.record_list_error_delete_failed) } returns "刪除失敗，請稍後再試"
         viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
     }
@@ -59,10 +60,22 @@ class RecordListViewModelTest {
         assertThat(state.errorMessage).isNull()
     }
 
+    /** 初始 filter 預設應為最近 30 天（startMs 為 29 天前起點，endMs 為今天終點）。 */
+    @Test
+    fun `initial filter defaults to last 30 days`() {
+        val expectedStart = DateUtils.startOfDay(daysAgo = 29)
+        val expectedEnd = DateUtils.endOfDay(daysAgo = 0)
+
+        val state = viewModel.uiState.value
+
+        assertThat(state.filter.startMs).isEqualTo(expectedStart)
+        assertThat(state.filter.endMs).isEqualTo(expectedEnd)
+    }
+
     /** 成功取得紀錄後，列表應依記錄時間降冪排序顯示。 */
     @Test
     fun `success state populates records sorted by recordedAt descending`() {
-        every { mockRepository.observeRecords() } returns flowOf(DataState.Success(sampleRecords))
+        every { mockRepository.observeRecords(any(), any()) } returns flowOf(DataState.Success(sampleRecords))
 
         viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
 
@@ -76,7 +89,7 @@ class RecordListViewModelTest {
     @Test
     fun `error state sets errorMessage and clears isLoading`() {
         val error = RuntimeException("Firestore error")
-        every { mockRepository.observeRecords() } returns flowOf(DataState.Error(error, "Firestore error"))
+        every { mockRepository.observeRecords(any(), any()) } returns flowOf(DataState.Error(error, "Firestore error"))
 
         viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
 
@@ -88,7 +101,7 @@ class RecordListViewModelTest {
     /** 資料載入中時，isLoading 應為 true 以顯示載入指示器。 */
     @Test
     fun `loading state sets isLoading true`() {
-        every { mockRepository.observeRecords() } returns flowOf(DataState.Loading)
+        every { mockRepository.observeRecords(any(), any()) } returns flowOf(DataState.Loading)
 
         viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
 
@@ -128,7 +141,7 @@ class RecordListViewModelTest {
     /** 刪除紀錄成功時，不應顯示任何錯誤訊息。 */
     @Test
     fun `deleteRecord does not set errorMessage on success`() = runTest {
-        every { mockRepository.observeRecords() } returns flowOf(DataState.Success(emptyList()))
+        every { mockRepository.observeRecords(any(), any()) } returns flowOf(DataState.Success(emptyList()))
         viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
         coEvery { mockRepository.deleteRecord(any()) } just Runs
 
@@ -150,7 +163,7 @@ class RecordListViewModelTest {
     /** 取得空列表時，應顯示無資料的空狀態而非載入中或錯誤。 */
     @Test
     fun `success with empty list shows empty state`() {
-        every { mockRepository.observeRecords() } returns flowOf(DataState.Success(emptyList()))
+        every { mockRepository.observeRecords(any(), any()) } returns flowOf(DataState.Success(emptyList()))
 
         viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
 
@@ -169,7 +182,7 @@ class RecordListViewModelTest {
     @Test
     fun `success after error clears errorMessage`() {
         val error = RuntimeException("Firestore error")
-        every { mockRepository.observeRecords() } returns flowOf(
+        every { mockRepository.observeRecords(any(), any()) } returns flowOf(
             DataState.Error(error, "Firestore error"),
             DataState.Success(sampleRecords),
         )
@@ -193,12 +206,59 @@ class RecordListViewModelTest {
             pulse = 70,
             recordedAt = 1000L,
         )
-        every { mockRepository.observeRecords() } returns flowOf(DataState.Success(listOf(singleRecord)))
+        every { mockRepository.observeRecords(any(), any()) } returns flowOf(DataState.Success(listOf(singleRecord)))
 
         viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
 
         val state = viewModel.uiState.value
         assertThat(state.records.size).isEqualTo(1)
         assertThat(state.records.first().id).isEqualTo("only-1")
+    }
+
+    // ── 日期篩選 ────────────────────────────────────────────────────────────────
+
+    /** 呼叫 onDateRangeConfirmed 後，uiState.filter 應更新為指定的日期範圍。 */
+    @Test
+    fun `onDateRangeConfirmed updates filter`() {
+        val newStart = 1_000_000L
+        val newEnd = 2_000_000L
+
+        viewModel.onDateRangeConfirmed(newStart, newEnd)
+
+        val filter = viewModel.uiState.value.filter
+        assertThat(filter.startMs).isEqualTo(newStart)
+        assertThat(filter.endMs).isEqualTo(newEnd)
+    }
+
+    /** 呼叫 onShowDateRangeDialog 後，isDateRangeDialogVisible 應為 true。 */
+    @Test
+    fun `onShowDateRangeDialog sets isDateRangeDialogVisible true`() {
+        viewModel.onShowDateRangeDialog()
+
+        assertThat(viewModel.uiState.value.isDateRangeDialogVisible).isTrue()
+    }
+
+    /** 呼叫 onDismissDateRangeDialog 後，isDateRangeDialogVisible 應為 false。 */
+    @Test
+    fun `onDismissDateRangeDialog sets isDateRangeDialogVisible false`() {
+        viewModel.onShowDateRangeDialog()
+        viewModel.onDismissDateRangeDialog()
+
+        assertThat(viewModel.uiState.value.isDateRangeDialogVisible).isFalse()
+    }
+
+    /**
+     * 更新日期範圍後，Repository 應以新的 startMs/endMs 重新訂閱，
+     * 確認 flatMapLatest 切換正確傳遞篩選條件。
+     */
+    @Test
+    fun `onDateRangeConfirmed re-subscribes repository with new date range`() = runTest {
+        val newStart = 1_000_000L
+        val newEnd = 2_000_000L
+        every { mockRepository.observeRecords(newStart, newEnd) } returns flowOf(DataState.Success(emptyList()))
+
+        viewModel.onDateRangeConfirmed(newStart, newEnd)
+
+        coVerify { mockRepository.observeRecords(newStart, newEnd) }
     }
 }
