@@ -111,70 +111,25 @@ internal fun AddEditRecordContent(
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
 
-    val currentZdt = remember(uiState.recordedAt) {
-        Instant.ofEpochMilli(uiState.recordedAt).atZone(ZoneId.systemDefault())
-    }
-
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = DateUtils.toUtcMidnightMillis(uiState.recordedAt),
+        RecordDatePickerDialog(
+            recordedAt = uiState.recordedAt,
+            onConfirm = { newRecordedAt ->
+                onRecordedAtChange(newRecordedAt)
+                showDatePicker = false
+            },
+            onDismiss = { showDatePicker = false },
         )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val selectedDate = datePickerState.selectedDateMillis
-                        if (selectedDate != null) {
-                            val newEpoch = DateUtils.combineDateAndTime(
-                                selectedDate,
-                                currentZdt.hour,
-                                currentZdt.minute,
-                            )
-                            onRecordedAtChange(newEpoch)
-                        }
-                        showDatePicker = false
-                    },
-                ) { Text(stringResource(R.string.button_confirm)) }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showDatePicker = false
-                }) { Text(stringResource(R.string.button_cancel)) }
-            },
-        ) {
-            DatePicker(state = datePickerState)
-        }
     }
 
     if (showTimePicker) {
-        val timePickerState = rememberTimePickerState(
-            initialHour = currentZdt.hour,
-            initialMinute = currentZdt.minute,
-            is24Hour = true,
-        )
-        AlertDialog(
-            onDismissRequest = { showTimePicker = false },
-            title = { Text(stringResource(R.string.dialog_title_time_picker)) },
-            text = { TimePicker(state = timePickerState) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val newEpoch = DateUtils.combineDateAndTime(
-                            DateUtils.toUtcMidnightMillis(uiState.recordedAt),
-                            timePickerState.hour,
-                            timePickerState.minute,
-                        )
-                        onRecordedAtChange(newEpoch)
-                        showTimePicker = false
-                    },
-                ) { Text(stringResource(R.string.button_confirm)) }
+        RecordTimePickerDialog(
+            recordedAt = uiState.recordedAt,
+            onConfirm = { newRecordedAt ->
+                onRecordedAtChange(newRecordedAt)
+                showTimePicker = false
             },
-            dismissButton = {
-                TextButton(onClick = {
-                    showTimePicker = false
-                }) { Text(stringResource(R.string.button_cancel)) }
-            },
+            onDismiss = { showTimePicker = false },
         )
     }
 
@@ -295,6 +250,85 @@ internal fun AddEditRecordContent(
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RecordDatePickerDialog(
+    recordedAt: Long,
+    onConfirm: (newRecordedAt: Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val currentZdt = remember(recordedAt) {
+        Instant.ofEpochMilli(recordedAt).atZone(ZoneId.systemDefault())
+    }
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = DateUtils.toUtcMidnightMillis(recordedAt),
+    )
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val selectedDate = datePickerState.selectedDateMillis
+                    if (selectedDate != null) {
+                        onConfirm(
+                            DateUtils.combineDateAndTime(
+                                selectedDate,
+                                currentZdt.hour,
+                                currentZdt.minute,
+                            )
+                        )
+                    } else {
+                        onDismiss()
+                    }
+                },
+            ) { Text(stringResource(R.string.button_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.button_cancel)) }
+        },
+    ) {
+        DatePicker(state = datePickerState)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RecordTimePickerDialog(
+    recordedAt: Long,
+    onConfirm: (newRecordedAt: Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val currentZdt = remember(recordedAt) {
+        Instant.ofEpochMilli(recordedAt).atZone(ZoneId.systemDefault())
+    }
+    val timePickerState = rememberTimePickerState(
+        initialHour = currentZdt.hour,
+        initialMinute = currentZdt.minute,
+        is24Hour = true,
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.dialog_title_time_picker)) },
+        text = { TimePicker(state = timePickerState) },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(
+                        DateUtils.combineDateAndTime(
+                            DateUtils.toUtcMidnightMillis(recordedAt),
+                            timePickerState.hour,
+                            timePickerState.minute,
+                        )
+                    )
+                },
+            ) { Text(stringResource(R.string.button_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.button_cancel)) }
+        },
+    )
 }
 
 @Composable
