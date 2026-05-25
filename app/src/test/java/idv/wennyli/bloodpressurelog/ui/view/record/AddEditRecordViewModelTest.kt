@@ -5,6 +5,8 @@ import androidx.lifecycle.SavedStateHandle
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
+import assertk.assertions.isGreaterThan
+import assertk.assertions.isLessThan
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
@@ -404,5 +406,53 @@ class AddEditRecordViewModelTest {
             awaitItem()
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    // ── resetForm ──
+
+    /** resetForm 後，所有輸入欄位應回到空字串初始值。 */
+    @Test
+    fun `resetForm clears all input fields`() {
+        val viewModel = addModeViewModel()
+        viewModel.onSystolicChange("120")
+        viewModel.onDiastolicChange("80")
+        viewModel.onPulseChange("72")
+        viewModel.onNoteChange("運動後量測")
+
+        viewModel.resetForm()
+
+        val state = viewModel.uiState.value
+        assertThat(state.systolic).isEqualTo("")
+        assertThat(state.diastolic).isEqualTo("")
+        assertThat(state.pulse).isEqualTo("")
+        assertThat(state.note).isEqualTo("")
+    }
+
+    /** resetForm 後，errorMessage 應清除為 null，isLoading 應歸零為 false。 */
+    @Test
+    fun `resetForm clears errorMessage and resets isLoading`() {
+        val viewModel = addModeViewModel()
+        viewModel.save() // 觸發 invalid input error，讓 errorMessage 非 null
+
+        viewModel.resetForm()
+
+        val state = viewModel.uiState.value
+        assertThat(state.errorMessage).isNull()
+        assertThat(state.isLoading).isFalse()
+    }
+
+    /** resetForm 後，recordedAt 應更新為當前時間（不等於重置前的舊值）。 */
+    @Test
+    fun `resetForm updates recordedAt to current time`() {
+        val viewModel = addModeViewModel()
+        viewModel.onRecordedAtChange(1000L) // 設定一個舊時間戳
+
+        val beforeReset = System.currentTimeMillis()
+        viewModel.resetForm()
+        val afterReset = System.currentTimeMillis()
+
+        val recordedAt = viewModel.uiState.value.recordedAt
+        assertThat(recordedAt).isGreaterThan(beforeReset - 1)
+        assertThat(recordedAt).isLessThan(afterReset + 1)
     }
 }
