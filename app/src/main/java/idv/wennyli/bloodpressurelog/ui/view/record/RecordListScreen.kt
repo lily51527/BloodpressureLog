@@ -1,7 +1,6 @@
 package idv.wennyli.bloodpressurelog.ui.view.record
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,13 +15,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -32,7 +32,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -100,20 +100,12 @@ fun RecordListScreen(
         )
     }
 
-    if (uiState.isDateRangeDialogVisible) {
-        DateRangeDialog(
-            currentFilter = uiState.filter,
-            onConfirm = viewModel::onDateRangeConfirmed,
-            onDismiss = viewModel::onDismissDateRangeDialog,
-        )
-    }
-
     RecordListContent(
         uiState = uiState,
         onSignOut = viewModel::signOut,
         onEditRecord = viewModel::onEditRecord,
         onDeleteRecord = { recordIdToDelete = it },
-        onShowDateRangeDialog = viewModel::onShowDateRangeDialog,
+        onDateRangeConfirmed = viewModel::onDateRangeConfirmed,
     )
 }
 
@@ -124,19 +116,61 @@ internal fun RecordListContent(
     onSignOut: () -> Unit,
     onEditRecord: (String) -> Unit,
     onDeleteRecord: (String) -> Unit,
-    onShowDateRangeDialog: () -> Unit = {},
+    onDateRangeConfirmed: (startMs: Long, endMs: Long) -> Unit = { _, _ -> },
 ) {
+    var pendingStartUtcMs by remember(uiState.filter) {
+        mutableLongStateOf(DateUtils.toUtcMidnightMillis(uiState.filter.startMs))
+    }
+    var pendingEndUtcMs by remember(uiState.filter) {
+        mutableLongStateOf(DateUtils.toUtcMidnightMillis(uiState.filter.endMs))
+    }
+    var showPicker by remember { mutableStateOf(DatePickerTarget.NONE) }
+
+    when (showPicker) {
+        DatePickerTarget.START -> {
+            val state = rememberDatePickerState(initialSelectedDateMillis = pendingStartUtcMs)
+            DatePickerDialog(
+                onDismissRequest = { showPicker = DatePickerTarget.NONE },
+                confirmButton = {
+                    TextButton(onClick = {
+                        state.selectedDateMillis?.let { pendingStartUtcMs = it }
+                        showPicker = DatePickerTarget.NONE
+                    }) { Text(stringResource(R.string.common_button_confirm)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showPicker = DatePickerTarget.NONE }) {
+                        Text(stringResource(R.string.common_button_cancel))
+                    }
+                },
+            ) { DatePicker(state = state) }
+        }
+
+        DatePickerTarget.END -> {
+            val state = rememberDatePickerState(initialSelectedDateMillis = pendingEndUtcMs)
+            DatePickerDialog(
+                onDismissRequest = { showPicker = DatePickerTarget.NONE },
+                confirmButton = {
+                    TextButton(onClick = {
+                        state.selectedDateMillis?.let { pendingEndUtcMs = it }
+                        showPicker = DatePickerTarget.NONE
+                    }) { Text(stringResource(R.string.common_button_confirm)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showPicker = DatePickerTarget.NONE }) {
+                        Text(stringResource(R.string.common_button_cancel))
+                    }
+                },
+            ) { DatePicker(state = state) }
+        }
+
+        DatePickerTarget.NONE -> Unit
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.record_list_screen_title)) },
                 actions = {
-                    IconButton(onClick = onShowDateRangeDialog) {
-                        Icon(
-                            imageVector = Icons.Default.DateRange,
-                            contentDescription = stringResource(R.string.record_list_cd_filter),
-                        )
-                    }
                     IconButton(onClick = onSignOut) {
                         Icon(imageVector = Icons.Default.ExitToApp, contentDescription = stringResource(R.string.record_list_cd_sign_out))
                     }
@@ -149,22 +183,17 @@ internal fun RecordListContent(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            AssistChip(
-                onClick = onShowDateRangeDialog,
-                label = {
-                    Text(
-                        "${DateUtils.formatDate(uiState.filter.startMs)} – ${DateUtils.formatDate(uiState.filter.endMs)}",
-                        style = MaterialTheme.typography.bodyMedium,
+            DateFilterRow(
+                pendingStartUtcMs = pendingStartUtcMs,
+                pendingEndUtcMs = pendingEndUtcMs,
+                onStartClick = { showPicker = DatePickerTarget.START },
+                onEndClick = { showPicker = DatePickerTarget.END },
+                onSearch = {
+                    onDateRangeConfirmed(
+                        DateUtils.utcMidnightToStartOfDay(pendingStartUtcMs),
+                        DateUtils.utcMidnightToEndOfDay(pendingEndUtcMs),
                     )
                 },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.DateRange,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
             Box(modifier = Modifier.weight(1f)) {
                 when {
@@ -212,112 +241,57 @@ internal fun RecordListContent(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DateRangeDialog(
-    currentFilter: RecordFilter,
-    onConfirm: (startMs: Long, endMs: Long) -> Unit,
-    onDismiss: () -> Unit,
+private fun DateFilterRow(
+    pendingStartUtcMs: Long,
+    pendingEndUtcMs: Long,
+    onStartClick: () -> Unit,
+    onEndClick: () -> Unit,
+    onSearch: () -> Unit,
 ) {
-    var selectedStartUtcMs by remember { mutableLongStateOf(DateUtils.toUtcMidnightMillis(currentFilter.startMs)) }
-    var selectedEndUtcMs by remember { mutableLongStateOf(DateUtils.toUtcMidnightMillis(currentFilter.endMs)) }
-    var showPicker by remember { mutableStateOf(DatePickerTarget.NONE) }
-
-    when (showPicker) {
-        DatePickerTarget.START -> {
-            val state = rememberDatePickerState(initialSelectedDateMillis = selectedStartUtcMs)
-            DatePickerDialog(
-                onDismissRequest = { showPicker = DatePickerTarget.NONE },
-                confirmButton = {
-                    TextButton(onClick = {
-                        state.selectedDateMillis?.let { selectedStartUtcMs = it }
-                        showPicker = DatePickerTarget.NONE
-                    }) { Text(stringResource(R.string.common_button_confirm)) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showPicker = DatePickerTarget.NONE }) {
-                        Text(stringResource(R.string.common_button_cancel))
-                    }
-                },
-            ) { DatePicker(state = state) }
-        }
-
-        DatePickerTarget.END -> {
-            val state = rememberDatePickerState(initialSelectedDateMillis = selectedEndUtcMs)
-            DatePickerDialog(
-                onDismissRequest = { showPicker = DatePickerTarget.NONE },
-                confirmButton = {
-                    TextButton(onClick = {
-                        state.selectedDateMillis?.let { selectedEndUtcMs = it }
-                        showPicker = DatePickerTarget.NONE
-                    }) { Text(stringResource(R.string.common_button_confirm)) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showPicker = DatePickerTarget.NONE }) {
-                        Text(stringResource(R.string.common_button_cancel))
-                    }
-                },
-            ) { DatePicker(state = state) }
-        }
-
-        DatePickerTarget.NONE -> {
-            AlertDialog(
-                onDismissRequest = onDismiss,
-                title = { Text(stringResource(R.string.record_list_filter_title)) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        DateField(
-                            label = stringResource(R.string.record_list_filter_start_date),
-                            utcMidnightMs = selectedStartUtcMs,
-                            onClick = { showPicker = DatePickerTarget.START },
-                        )
-                        DateField(
-                            label = stringResource(R.string.record_list_filter_end_date),
-                            utcMidnightMs = selectedEndUtcMs,
-                            onClick = { showPicker = DatePickerTarget.END },
-                        )
-                    }
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            onConfirm(
-                                DateUtils.utcMidnightToStartOfDay(selectedStartUtcMs),
-                                DateUtils.utcMidnightToEndOfDay(selectedEndUtcMs),
-                            )
-                        },
-                        enabled = selectedStartUtcMs <= selectedEndUtcMs,
-                    ) { Text(stringResource(R.string.common_button_confirm)) }
-                },
-                dismissButton = {
-                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_button_cancel)) }
-                },
-            )
-        }
-    }
-}
-
-@Composable
-private fun DateField(
-    label: String,
-    utcMidnightMs: Long,
-    onClick: () -> Unit,
-) {
-    OutlinedCard(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+        OutlinedButton(
+            onClick = onStartClick,
+            shape = RoundedCornerShape(50),
+            modifier = Modifier.weight(1f),
+        ) {
+            Icon(
+                imageVector = Icons.Default.DateRange,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
-                text = DateUtils.formatDate(DateUtils.utcMidnightToStartOfDay(utcMidnightMs)),
-                style = MaterialTheme.typography.bodyLarge,
+                text = DateUtils.formatDate(DateUtils.utcMidnightToStartOfDay(pendingStartUtcMs)),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        OutlinedButton(
+            onClick = onEndClick,
+            shape = RoundedCornerShape(50),
+            modifier = Modifier.weight(1f),
+        ) {
+            Icon(
+                imageVector = Icons.Default.DateRange,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = DateUtils.formatDate(DateUtils.utcMidnightToStartOfDay(pendingEndUtcMs)),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        IconButton(onClick = onSearch) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = stringResource(R.string.record_list_cd_search),
             )
         }
     }

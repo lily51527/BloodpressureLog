@@ -230,23 +230,6 @@ class RecordListViewModelTest {
         assertThat(filter.endMs).isEqualTo(newEnd)
     }
 
-    /** 呼叫 onShowDateRangeDialog 後，isDateRangeDialogVisible 應為 true。 */
-    @Test
-    fun `onShowDateRangeDialog sets isDateRangeDialogVisible true`() {
-        viewModel.onShowDateRangeDialog()
-
-        assertThat(viewModel.uiState.value.isDateRangeDialogVisible).isTrue()
-    }
-
-    /** 呼叫 onDismissDateRangeDialog 後，isDateRangeDialogVisible 應為 false。 */
-    @Test
-    fun `onDismissDateRangeDialog sets isDateRangeDialogVisible false`() {
-        viewModel.onShowDateRangeDialog()
-        viewModel.onDismissDateRangeDialog()
-
-        assertThat(viewModel.uiState.value.isDateRangeDialogVisible).isFalse()
-    }
-
     /**
      * 更新日期範圍後，Repository 應以新的 startMs/endMs 重新訂閱，
      * 確認 flatMapLatest 切換正確傳遞篩選條件。

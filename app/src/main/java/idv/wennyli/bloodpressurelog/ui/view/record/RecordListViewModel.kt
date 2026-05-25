@@ -28,7 +28,6 @@ data class RecordListUiState(
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
     val filter: RecordFilter = RecordFilter.default(),
-    val isDateRangeDialogVisible: Boolean = false,
 )
 
 @HiltViewModel
@@ -75,14 +74,6 @@ class RecordListViewModel @Inject constructor(
 
     fun onDateRangeConfirmed(startMs: Long, endMs: Long) {
         _filter.value = RecordFilter(startMs = startMs, endMs = endMs)
-    }
-
-    fun onShowDateRangeDialog() {
-        _uiState.update { it.copy(isDateRangeDialogVisible = true) }
-    }
-
-    fun onDismissDateRangeDialog() {
-        _uiState.update { it.copy(isDateRangeDialogVisible = false) }
     }
 
     fun onEditRecord(id: String) {
