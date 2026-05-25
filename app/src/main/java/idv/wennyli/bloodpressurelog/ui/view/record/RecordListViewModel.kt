@@ -81,7 +81,7 @@ class RecordListViewModel @Inject constructor(
             try {
                 repository.deleteRecord(id)
             } catch (e: Exception) {
-                Timber.e(e, "deleteRecord failed")
+                Timber.e(e, "[RecordListViewModel] deleteRecord failed")
                 _uiState.update {
                     it.copy(errorMessage = resourceProvider.getString(R.string.error_delete_record_failed))
                 }

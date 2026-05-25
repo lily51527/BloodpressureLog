@@ -75,7 +75,7 @@ class AddEditRecordViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                Timber.e(e, "loadRecord failed")
+                Timber.e(e, "[AddEditRecordViewModel] loadRecord failed")
                 _uiState.update {
                     it.copy(isLoading = false, errorMessage = e.message ?: resourceProvider.getString(R.string.error_record_load_failed))
                 }

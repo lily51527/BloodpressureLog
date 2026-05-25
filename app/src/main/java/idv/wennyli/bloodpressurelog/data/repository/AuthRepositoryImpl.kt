@@ -31,7 +31,7 @@ class AuthRepositoryImpl @Inject constructor(
         try {
             auth.signInWithEmailAndPassword(email, password).await()
         } catch (e: Exception) {
-            Timber.e(e, "signInWithEmail failed")
+            Timber.e(e, "[AuthRepositoryImpl] signInWithEmail failed")
             throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
     }
@@ -40,7 +40,7 @@ class AuthRepositoryImpl @Inject constructor(
         try {
             auth.signInAnonymously().await()
         } catch (e: Exception) {
-            Timber.e(e, "signInAnonymously failed")
+            Timber.e(e, "[AuthRepositoryImpl] signInAnonymously failed")
             throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
     }
@@ -54,7 +54,7 @@ class AuthRepositoryImpl @Inject constructor(
             auth.createUserWithEmailAndPassword(email, password).await()
             auth.currentUser?.sendEmailVerification()
         } catch (e: Exception) {
-            Timber.e(e, "registerWithEmail failed")
+            Timber.e(e, "[AuthRepositoryImpl] registerWithEmail failed")
             throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
     }
@@ -65,7 +65,7 @@ class AuthRepositoryImpl @Inject constructor(
         try {
             user.sendEmailVerification().await()
         } catch (e: Exception) {
-            Timber.e(e, "sendEmailVerification failed")
+            Timber.e(e, "[AuthRepositoryImpl] sendEmailVerification failed")
             throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
     }
@@ -74,7 +74,7 @@ class AuthRepositoryImpl @Inject constructor(
         try {
             auth.sendPasswordResetEmail(email).await()
         } catch (e: Exception) {
-            Timber.e(e, "sendPasswordResetEmail failed")
+            Timber.e(e, "[AuthRepositoryImpl] sendPasswordResetEmail failed")
             throw AuthException(resourceProvider.getString(e.toAuthErrorStringRes()), e)
         }
     }

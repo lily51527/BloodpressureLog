@@ -97,7 +97,7 @@ private fun com.google.firebase.firestore.DocumentSnapshot.toBloodPressureRecord
             updatedAt = getTimestamp("updatedAt")?.toEpochMillis() ?: System.currentTimeMillis(),
         )
     } catch (e: Exception) {
-        Timber.e(e, "toBloodPressureRecord failed, documentId=$id")
+        Timber.e(e, "[BloodPressureRepositoryImpl] toBloodPressureRecord failed, documentId=$id")
         null
     }
 

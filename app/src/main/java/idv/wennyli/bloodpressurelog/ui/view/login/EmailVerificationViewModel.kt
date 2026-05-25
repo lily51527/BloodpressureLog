@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import timber.log.Timber
 import javax.inject.Inject
 
 data class EmailVerificationUiState(
@@ -49,7 +48,6 @@ class EmailVerificationViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false) }
                 startCooldown()
             } catch (e: Exception) {
-                Timber.e(e, "resendVerificationEmail failed")
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "") }
             }
         }
