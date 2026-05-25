@@ -5,8 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import idv.wennyli.bloodpressurelog.R
-import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
+import idv.wennyli.bloodpressurelog.domain.usecase.SaveBloodPressureRecordUseCase
+import idv.wennyli.bloodpressurelog.domain.usecase.SaveRecordResult
 import idv.wennyli.bloodpressurelog.utils.ResourceProvider
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +25,6 @@ data class AddEditRecordUiState(
     val pulse: String = "",
     val note: String = "",
     val recordedAt: Long = System.currentTimeMillis(),
-    val originalCreatedAt: Long = System.currentTimeMillis(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val isEditMode: Boolean = false,
@@ -33,6 +33,7 @@ data class AddEditRecordUiState(
 @HiltViewModel
 class AddEditRecordViewModel @Inject constructor(
     private val repository: BloodPressureRepository,
+    private val saveRecordUseCase: SaveBloodPressureRecordUseCase,
     private val resourceProvider: ResourceProvider,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -64,7 +65,6 @@ class AddEditRecordViewModel @Inject constructor(
                             pulse = record.pulse.toString(),
                             note = record.note,
                             recordedAt = record.recordedAt,
-                            originalCreatedAt = record.createdAt,
                             isLoading = false,
                         )
                     }
@@ -116,36 +116,25 @@ class AddEditRecordViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            try {
-                if (recordId != null) {
-                    repository.updateRecord(
-                        BloodPressureRecord(
-                            id = recordId,
-                            systolic = systolic,
-                            diastolic = diastolic,
-                            pulse = pulse,
-                            note = state.note,
-                            recordedAt = state.recordedAt,
-                            createdAt = state.originalCreatedAt,
-                            updatedAt = System.currentTimeMillis(),
-                        ),
-                    )
-                } else {
-                    repository.addRecord(
-                        BloodPressureRecord(
-                            systolic = systolic,
-                            diastolic = diastolic,
-                            pulse = pulse,
-                            note = state.note,
-                            recordedAt = state.recordedAt,
-                        ),
-                    )
+            when (val result = saveRecordUseCase(
+                recordId = recordId,
+                systolic = systolic,
+                diastolic = diastolic,
+                pulse = pulse,
+                note = state.note,
+                recordedAt = state.recordedAt,
+            )) {
+                is SaveRecordResult.Success -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    _savedSuccessfully.emit(Unit)
                 }
-                _uiState.update { it.copy(isLoading = false) }
-                _savedSuccessfully.emit(Unit)
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(isLoading = false, errorMessage = e.message ?: resourceProvider.getString(R.string.error_record_save_failed))
+                is SaveRecordResult.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = result.message ?: resourceProvider.getString(R.string.error_record_save_failed),
+                        )
+                    }
                 }
             }
         }

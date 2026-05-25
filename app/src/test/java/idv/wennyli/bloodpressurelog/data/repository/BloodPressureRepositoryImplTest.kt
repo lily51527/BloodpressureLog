@@ -1,8 +1,12 @@
 package idv.wennyli.bloodpressurelog.data.repository
 
 import app.cash.turbine.test
-import com.google.android.gms.tasks.OnFailureListener
-import com.google.android.gms.tasks.OnSuccessListener
+import assertk.assertThat
+import assertk.assertions.hasSize
+import assertk.assertions.isEqualTo
+import assertk.assertions.isEmpty
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNull
 import com.google.android.gms.tasks.Task
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
@@ -21,12 +25,9 @@ import idv.wennyli.bloodpressurelog.data.model.DataState
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.junit.Assert.assertNull
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
 
 class BloodPressureRepositoryImplTest {
 
@@ -40,7 +41,7 @@ class BloodPressureRepositoryImplTest {
 
     private lateinit var repository: BloodPressureRepositoryImpl
 
-    @Before
+    @BeforeTest
     fun setUp() {
         every { mockAuth.currentUser } returns mockUser
         every { mockUser.uid } returns "uid-123"
@@ -53,6 +54,7 @@ class BloodPressureRepositoryImplTest {
 
     // region observeRecords
 
+    /** observeRecords 應先發射 Loading，再發射包含正確轉換紀錄的 Success。 */
     @Test
     fun `observeRecords emits Loading then Success with mapped records`() = runTest {
         val snapshot = mockk<QuerySnapshot>()
@@ -60,20 +62,21 @@ class BloodPressureRepositoryImplTest {
         deliverSnapshot(snapshot, null)
 
         repository.observeRecords().test {
-            assertTrue(awaitItem() is DataState.Loading)
+            assertThat(awaitItem()).isInstanceOf(DataState.Loading::class)
             val success = awaitItem() as DataState.Success<*>
             @Suppress("UNCHECKED_CAST")
             val records = success.data as List<BloodPressureRecord>
-            assertEquals(1, records.size)
-            assertEquals("doc-1", records[0].id)
-            assertEquals(120, records[0].systolic)
-            assertEquals(80, records[0].diastolic)
-            assertEquals(70, records[0].pulse)
-            assertEquals("note", records[0].note)
+            assertThat(records).hasSize(1)
+            assertThat(records[0].id).isEqualTo("doc-1")
+            assertThat(records[0].systolic).isEqualTo(120)
+            assertThat(records[0].diastolic).isEqualTo(80)
+            assertThat(records[0].pulse).isEqualTo(70)
+            assertThat(records[0].note).isEqualTo("note")
             cancelAndIgnoreRemainingEvents()
         }
     }
 
+    /** Firestore 快照為空時，observeRecords 應發射空列表的 Success 狀態。 */
     @Test
     fun `observeRecords emits Loading then empty Success when snapshot is empty`() = runTest {
         val snapshot = mockk<QuerySnapshot>()
@@ -81,14 +84,39 @@ class BloodPressureRepositoryImplTest {
         deliverSnapshot(snapshot, null)
 
         repository.observeRecords().test {
-            assertTrue(awaitItem() is DataState.Loading)
+            assertThat(awaitItem()).isInstanceOf(DataState.Loading::class)
             val success = awaitItem() as DataState.Success<*>
             @Suppress("UNCHECKED_CAST")
-            assertTrue((success.data as List<*>).isEmpty())
+            assertThat(success.data as List<*>).isEmpty()
             cancelAndIgnoreRemainingEvents()
         }
     }
 
+    /** snapshot 含多筆有效文件時，observeRecords 應發射包含所有文件的 Success。 */
+    @Test
+    fun `observeRecords emits Success with all records when snapshot has multiple documents`() = runTest {
+        val snapshot = mockk<QuerySnapshot>()
+        every { snapshot.documents } returns listOf(
+            buildMockDocument("doc-1"),
+            buildMockDocument("doc-2"),
+            buildMockDocument("doc-3"),
+        )
+        deliverSnapshot(snapshot, null)
+
+        repository.observeRecords().test {
+            assertThat(awaitItem()).isInstanceOf(DataState.Loading::class)
+            val success = awaitItem() as DataState.Success<*>
+            @Suppress("UNCHECKED_CAST")
+            val records = success.data as List<BloodPressureRecord>
+            assertThat(records).hasSize(3)
+            assertThat(records[0].id).isEqualTo("doc-1")
+            assertThat(records[1].id).isEqualTo("doc-2")
+            assertThat(records[2].id).isEqualTo("doc-3")
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /** 缺少必要欄位的 Firestore 文件，observeRecords 應略過並回傳空列表。 */
     @Test
     fun `observeRecords skips documents with missing required fields`() = runTest {
         val snapshot = mockk<QuerySnapshot>()
@@ -99,14 +127,41 @@ class BloodPressureRepositoryImplTest {
         deliverSnapshot(snapshot, null)
 
         repository.observeRecords().test {
-            assertTrue(awaitItem() is DataState.Loading)
+            assertThat(awaitItem()).isInstanceOf(DataState.Loading::class)
             val success = awaitItem() as DataState.Success<*>
             @Suppress("UNCHECKED_CAST")
-            assertTrue((success.data as List<*>).isEmpty())
+            assertThat(success.data as List<*>).isEmpty()
             cancelAndIgnoreRemainingEvents()
         }
     }
 
+    /** 有效與無效文件混合時，observeRecords 應只保留能正確轉換的文件。 */
+    @Test
+    fun `observeRecords includes only valid documents when mixed with invalid ones`() = runTest {
+        val invalidDoc = mockk<DocumentSnapshot>()
+        every { invalidDoc.id } returns "invalid"
+        every { invalidDoc.getLong("systolic") } returns null
+        val snapshot = mockk<QuerySnapshot>()
+        every { snapshot.documents } returns listOf(
+            buildMockDocument("doc-1"),
+            invalidDoc,
+            buildMockDocument("doc-2"),
+        )
+        deliverSnapshot(snapshot, null)
+
+        repository.observeRecords().test {
+            assertThat(awaitItem()).isInstanceOf(DataState.Loading::class)
+            val success = awaitItem() as DataState.Success<*>
+            @Suppress("UNCHECKED_CAST")
+            val records = success.data as List<BloodPressureRecord>
+            assertThat(records).hasSize(2)
+            assertThat(records[0].id).isEqualTo("doc-1")
+            assertThat(records[1].id).isEqualTo("doc-2")
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /** Firestore 發生錯誤時，observeRecords 應在 Loading 後發射 Error 狀態並附帶錯誤資訊。 */
     @Test
     fun `observeRecords emits Loading then Error on Firestore error`() = runTest {
         val exception = mockk<FirebaseFirestoreException>()
@@ -114,14 +169,15 @@ class BloodPressureRepositoryImplTest {
         deliverSnapshot(null, exception)
 
         repository.observeRecords().test {
-            assertTrue(awaitItem() is DataState.Loading)
+            assertThat(awaitItem()).isInstanceOf(DataState.Loading::class)
             val error = awaitItem() as DataState.Error
-            assertEquals(exception, error.throwable)
-            assertEquals("Firestore error", error.message)
+            assertThat(error.throwable).isEqualTo(exception)
+            assertThat(error.message).isEqualTo("Firestore error")
             cancelAndIgnoreRemainingEvents()
         }
     }
 
+    /** Flow 被取消時，observeRecords 應移除 Firestore 監聽器以避免資源洩漏。 */
     @Test
     fun `observeRecords removes listener when flow is cancelled`() = runTest {
         val snapshot = mockk<QuerySnapshot>()
@@ -137,6 +193,7 @@ class BloodPressureRepositoryImplTest {
         verify { mockListenerRegistration.remove() }
     }
 
+    /** observeRecords 應查詢正確的 Firestore 集合路徑以存取對應使用者的紀錄。 */
     @Test
     fun `observeRecords queries correct Firestore path`() = runTest {
         val snapshot = mockk<QuerySnapshot>()
@@ -150,10 +207,36 @@ class BloodPressureRepositoryImplTest {
         verify { mockFirestore.collection("artifacts/bloodpressurelog_debug/users/uid-123/bloodPressures") }
     }
 
+    /** Firestore 連續推送兩次 snapshot 時，observeRecords 應依序發射對應的兩次 Success。 */
+    @Test
+    fun `observeRecords emits updated list when Firestore pushes a second snapshot`() = runTest {
+        val snapshot1 = mockk<QuerySnapshot>()
+        every { snapshot1.documents } returns listOf(buildMockDocument("doc-1"))
+        val snapshot2 = mockk<QuerySnapshot>()
+        every { snapshot2.documents } returns listOf(buildMockDocument("doc-1"), buildMockDocument("doc-2"))
+
+        every { mockQuery.addSnapshotListener(any<EventListener<QuerySnapshot>>()) } answers {
+            val listener = firstArg<EventListener<QuerySnapshot>>()
+            listener.onEvent(snapshot1, null)
+            listener.onEvent(snapshot2, null)
+            mockListenerRegistration
+        }
+
+        repository.observeRecords().test {
+            assertThat(awaitItem()).isInstanceOf(DataState.Loading::class)
+            @Suppress("UNCHECKED_CAST")
+            assertThat((awaitItem() as DataState.Success<*>).data as List<*>).hasSize(1)
+            @Suppress("UNCHECKED_CAST")
+            assertThat((awaitItem() as DataState.Success<*>).data as List<*>).hasSize(2)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
     // endregion
 
     // region getRecord
 
+    /** 文件存在時，getRecord 應正確取得並回傳轉換後的血壓紀錄。 */
     @Test
     fun `getRecord returns record when document exists`() = runTest {
         val mockDoc = buildMockDocument("doc-1")
@@ -162,11 +245,12 @@ class BloodPressureRepositoryImplTest {
 
         val result = repository.getRecord("doc-1")
 
-        assertEquals("doc-1", result?.id)
-        assertEquals(120, result?.systolic)
-        assertEquals(80, result?.diastolic)
+        assertThat(result?.id).isEqualTo("doc-1")
+        assertThat(result?.systolic).isEqualTo(120)
+        assertThat(result?.diastolic).isEqualTo(80)
     }
 
+    /** 文件欄位不完整無法轉換時，getRecord 應回傳 null。 */
     @Test
     fun `getRecord returns null when document cannot be mapped`() = runTest {
         val invalidDoc = mockk<DocumentSnapshot>()
@@ -177,9 +261,10 @@ class BloodPressureRepositoryImplTest {
 
         val result = repository.getRecord("invalid")
 
-        assertNull(result)
+        assertThat(result).isNull()
     }
 
+    /** Firestore 讀取失敗時，getRecord 應拋出對應的例外。 */
     @Test
     fun `getRecord throws on Firestore failure`() = runTest {
         val exception = RuntimeException("get failed")
@@ -187,13 +272,14 @@ class BloodPressureRepositoryImplTest {
         every { mockDocumentRef.get() } returns task
 
         val thrown = runCatching { repository.getRecord("doc-1") }.exceptionOrNull()
-        assertEquals("get failed", thrown?.message)
+        assertThat(thrown?.message).isEqualTo("get failed")
     }
 
     // endregion
 
     // region addRecord
 
+    /** Firestore 新增成功時，addRecord 應正常完成而不拋出例外。 */
     @Test
     fun `addRecord completes on Firestore success`() = runTest {
         val task = buildSuccessTask<DocumentReference>(mockDocumentRef)
@@ -202,6 +288,7 @@ class BloodPressureRepositoryImplTest {
         repository.addRecord(sampleRecord())
     }
 
+    /** Firestore 新增失敗時，addRecord 應拋出對應的例外。 */
     @Test
     fun `addRecord throws on Firestore failure`() = runTest {
         val exception = RuntimeException("add failed")
@@ -209,13 +296,14 @@ class BloodPressureRepositoryImplTest {
         every { mockCollection.add(any()) } returns task
 
         val thrown = runCatching { repository.addRecord(sampleRecord()) }.exceptionOrNull()
-        assertEquals("add failed", thrown?.message)
+        assertThat(thrown?.message).isEqualTo("add failed")
     }
 
     // endregion
 
     // region updateRecord
 
+    /** Firestore 更新成功時，updateRecord 應正常完成而不拋出例外。 */
     @Test
     fun `updateRecord completes on Firestore success`() = runTest {
         val task = buildSuccessTask<Void>(null)
@@ -224,6 +312,7 @@ class BloodPressureRepositoryImplTest {
         repository.updateRecord(sampleRecord(id = "doc-1"))
     }
 
+    /** Firestore 更新失敗時，updateRecord 應拋出對應的例外。 */
     @Test
     fun `updateRecord throws on Firestore failure`() = runTest {
         val exception = RuntimeException("update failed")
@@ -231,60 +320,66 @@ class BloodPressureRepositoryImplTest {
         every { mockDocumentRef.set(any(), any()) } returns task
 
         val thrown = runCatching { repository.updateRecord(sampleRecord(id = "doc-1")) }.exceptionOrNull()
-        assertEquals("update failed", thrown?.message)
+        assertThat(thrown?.message).isEqualTo("update failed")
     }
 
     // endregion
 
     // region unauthenticated
 
+    /** 使用者未登入時，observeRecords 應立即發射 Error 而非嘗試存取 Firestore。 */
     @Test
     fun `observeRecords emits Error immediately when user is null`() = runTest {
         every { mockAuth.currentUser } returns null
 
         repository.observeRecords().test {
             val error = awaitItem() as DataState.Error
-            assertEquals("請重新登入", error.message)
+            assertThat(error.message).isEqualTo("請重新登入")
             awaitComplete()
         }
     }
 
+    /** 使用者未登入時，getRecord 應拋出例外要求重新登入。 */
     @Test
     fun `getRecord throws when user is null`() = runTest {
         every { mockAuth.currentUser } returns null
 
         val thrown = runCatching { repository.getRecord("doc-1") }.exceptionOrNull()
-        assertEquals("請重新登入", thrown?.message)
+        assertThat(thrown?.message).isEqualTo("請重新登入")
     }
 
+    /** 使用者未登入時，addRecord 應拋出例外要求重新登入。 */
     @Test
     fun `addRecord throws when user is null`() = runTest {
         every { mockAuth.currentUser } returns null
 
         val thrown = runCatching { repository.addRecord(sampleRecord()) }.exceptionOrNull()
-        assertEquals("請重新登入", thrown?.message)
+        assertThat(thrown?.message).isEqualTo("請重新登入")
     }
 
+    /** 使用者未登入時，updateRecord 應拋出例外要求重新登入。 */
     @Test
     fun `updateRecord throws when user is null`() = runTest {
         every { mockAuth.currentUser } returns null
 
         val thrown = runCatching { repository.updateRecord(sampleRecord(id = "doc-1")) }.exceptionOrNull()
-        assertEquals("請重新登入", thrown?.message)
+        assertThat(thrown?.message).isEqualTo("請重新登入")
     }
 
+    /** 使用者未登入時，deleteRecord 應拋出例外要求重新登入。 */
     @Test
     fun `deleteRecord throws when user is null`() = runTest {
         every { mockAuth.currentUser } returns null
 
         val thrown = runCatching { repository.deleteRecord("doc-1") }.exceptionOrNull()
-        assertEquals("請重新登入", thrown?.message)
+        assertThat(thrown?.message).isEqualTo("請重新登入")
     }
 
     // endregion
 
     // region deleteRecord
 
+    /** Firestore 刪除成功時，deleteRecord 應正常完成而不拋出例外。 */
     @Test
     fun `deleteRecord completes on Firestore success`() = runTest {
         val task = buildSuccessTask<Void>(null)
@@ -293,6 +388,7 @@ class BloodPressureRepositoryImplTest {
         repository.deleteRecord("doc-1")
     }
 
+    /** Firestore 刪除失敗時，deleteRecord 應拋出對應的例外。 */
     @Test
     fun `deleteRecord throws on Firestore failure`() = runTest {
         val exception = RuntimeException("delete failed")
@@ -300,7 +396,7 @@ class BloodPressureRepositoryImplTest {
         every { mockDocumentRef.delete() } returns task
 
         val thrown = runCatching { repository.deleteRecord("doc-1") }.exceptionOrNull()
-        assertEquals("delete failed", thrown?.message)
+        assertThat(thrown?.message).isEqualTo("delete failed")
     }
 
     // endregion
@@ -328,21 +424,27 @@ class BloodPressureRepositoryImplTest {
         }
     }
 
+    // 模擬一個「已成功完成」的 Firebase Task。
+    // await() 進入時先檢查 isComplete（fast-path）：
+    //   isComplete=true  → 不掛起，直接同步回傳
+    //   exception=null   → 沒有例外，表示成功
+    //   isCanceled=false → 排除「Task 被取消」的情況，確認是真正成功
+    //   result=value     → await() 的回傳值
     @Suppress("UNCHECKED_CAST")
     private fun <T> buildSuccessTask(value: Any?): Task<T> = mockk<Task<T>>().apply {
-        every { addOnSuccessListener(any()) } answers {
-            (firstArg() as OnSuccessListener<Any?>).onSuccess(value)
-            this@apply
-        }
-        every { addOnFailureListener(any()) } returns this@apply
+        every { isComplete } returns true
+        every { isCanceled } returns false
+        every { exception } returns null
+        every { result } returns value as T?
     }
 
+    // 模擬一個「已失敗完成」的 Firebase Task。
+    // await() 進入時：
+    //   isComplete=true  → 不掛起，直接同步回傳
+    //   exception≠null   → 有例外，await() 直接拋出，不再檢查 isCanceled
     private fun <T> buildFailureTask(exception: Exception): Task<T> = mockk<Task<T>>().apply {
-        every { addOnSuccessListener(any()) } returns this@apply
-        every { addOnFailureListener(any()) } answers {
-            firstArg<OnFailureListener>().onFailure(exception)
-            this@apply
-        }
+        every { isComplete } returns true
+        every { this@apply.exception } returns exception
     }
 
     private fun sampleRecord(id: String = "") = BloodPressureRecord(

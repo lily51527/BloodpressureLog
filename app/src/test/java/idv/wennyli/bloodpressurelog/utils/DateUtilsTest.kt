@@ -1,7 +1,9 @@
 package idv.wennyli.bloodpressurelog.utils
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import kotlin.test.Test
+import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -14,24 +16,28 @@ class DateUtilsTest {
             .toInstant()
             .toEpochMilli()
 
+    /** formatDate 應將毫秒時間戳記格式化為 yyyy/MM/dd 的日期字串。 */
     @Test
     fun `formatDate returns yyyy slash MM slash dd`() {
         val epoch = epochOf(2024, 3, 15, 10, 30)
-        assertEquals("2024/03/15", DateUtils.formatDate(epoch))
+        assertThat(DateUtils.formatDate(epoch)).isEqualTo("2024/03/15")
     }
 
+    /** formatTime 應將毫秒時間戳記格式化為 HH:mm 的時間字串。 */
     @Test
     fun `formatTime returns HH colon mm`() {
         val epoch = epochOf(2024, 3, 15, 9, 5)
-        assertEquals("09:05", DateUtils.formatTime(epoch))
+        assertThat(DateUtils.formatTime(epoch)).isEqualTo("09:05")
     }
 
+    /** formatDateTime 應將毫秒時間戳記格式化為日期與時間合併的字串。 */
     @Test
     fun `formatDateTime returns date and time combined`() {
         val epoch = epochOf(2024, 3, 15, 9, 5)
-        assertEquals("2024/03/15 09:05", DateUtils.formatDateTime(epoch))
+        assertThat(DateUtils.formatDateTime(epoch)).isEqualTo("2024/03/15 09:05")
     }
 
+    /** combineDateAndTime 應將 UTC 午夜日期與本地時間組合成正確的日期時間。 */
     @Test
     fun `combineDateAndTime combines UTC midnight date with local hour and minute`() {
         val utcMidnight = LocalDateTime.of(2024, 3, 15, 0, 0)
@@ -40,16 +46,52 @@ class DateUtilsTest {
 
         val result = DateUtils.combineDateAndTime(utcMidnight, hour = 14, minute = 30)
 
-        assertEquals("2024/03/15", DateUtils.formatDate(result))
-        assertEquals("14:30", DateUtils.formatTime(result))
+        assertThat(DateUtils.formatDate(result)).isEqualTo("2024/03/15")
+        assertThat(DateUtils.formatTime(result)).isEqualTo("14:30")
     }
 
+    /**
+     * toUtcMidnightMillis 回傳的毫秒值，以 UTC 時區解析後，小時與分鐘應為 0，
+     * 且日期應與輸入本地時間的日期一致。
+     */
+    @Test
+    fun `toUtcMidnightMillis returns UTC midnight of the local date`() {
+        val epoch = epochOf(2024, 3, 15, 22, 45)
+
+        val utcMidnight = DateUtils.toUtcMidnightMillis(epoch)
+
+        val zoned = Instant.ofEpochMilli(utcMidnight).atZone(ZoneOffset.UTC)
+        assertThat(zoned.hour).isEqualTo(0)
+        assertThat(zoned.minute).isEqualTo(0)
+        assertThat(zoned.second).isEqualTo(0)
+        assertThat(zoned.year).isEqualTo(2024)
+        assertThat(zoned.monthValue).isEqualTo(3)
+        assertThat(zoned.dayOfMonth).isEqualTo(15)
+    }
+
+    /** combineDateAndTime 在邊界時間（00:00 與 23:59）時應正確格式化，不發生日期偏移。 */
+    @Test
+    fun `combineDateAndTime with boundary hours returns correct time`() {
+        val utcMidnight = LocalDateTime.of(2024, 3, 15, 0, 0)
+            .toInstant(ZoneOffset.UTC)
+            .toEpochMilli()
+
+        val midnight = DateUtils.combineDateAndTime(utcMidnight, hour = 0, minute = 0)
+        val endOfDay = DateUtils.combineDateAndTime(utcMidnight, hour = 23, minute = 59)
+
+        assertThat(DateUtils.formatDate(midnight)).isEqualTo("2024/03/15")
+        assertThat(DateUtils.formatTime(midnight)).isEqualTo("00:00")
+        assertThat(DateUtils.formatDate(endOfDay)).isEqualTo("2024/03/15")
+        assertThat(DateUtils.formatTime(endOfDay)).isEqualTo("23:59")
+    }
+
+    /** toUtcMidnightMillis 與 combineDateAndTime 往返轉換後，日期與時間應與原始值一致。 */
     @Test
     fun `toUtcMidnightMillis and combineDateAndTime round-trip preserves date`() {
         val original = epochOf(2024, 6, 20, 22, 45)
         val utcMidnight = DateUtils.toUtcMidnightMillis(original)
         val roundTripped = DateUtils.combineDateAndTime(utcMidnight, 22, 45)
-        assertEquals(DateUtils.formatDate(original), DateUtils.formatDate(roundTripped))
-        assertEquals(DateUtils.formatTime(original), DateUtils.formatTime(roundTripped))
+        assertThat(DateUtils.formatDate(roundTripped)).isEqualTo(DateUtils.formatDate(original))
+        assertThat(DateUtils.formatTime(roundTripped)).isEqualTo(DateUtils.formatTime(original))
     }
 }

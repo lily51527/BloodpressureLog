@@ -3,7 +3,9 @@ package idv.wennyli.bloodpressurelog.ui.view.login
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
+import idv.wennyli.bloodpressurelog.utils.ResourceProvider
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -25,6 +27,7 @@ data class RegisterUiState(
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
     private val authRepository: AuthRepository,
+    private val resourceProvider: ResourceProvider,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegisterUiState())
@@ -45,11 +48,27 @@ class RegisterViewModel @Inject constructor(
         _uiState.update { it.copy(confirmPassword = confirmPassword, errorMessage = null) }
     }
 
-    fun register(passwordMismatchError: String) {
+    fun register() {
         val state = _uiState.value
-        if (state.password != state.confirmPassword) {
-            _uiState.update { it.copy(errorMessage = passwordMismatchError) }
-            return
+        when {
+            state.email.isBlank() -> {
+                _uiState.update {
+                    it.copy(errorMessage = resourceProvider.getString(R.string.error_email_required))
+                }
+                return
+            }
+            state.password.length < 6 -> {
+                _uiState.update {
+                    it.copy(errorMessage = resourceProvider.getString(R.string.error_auth_weak_password))
+                }
+                return
+            }
+            state.password != state.confirmPassword -> {
+                _uiState.update {
+                    it.copy(errorMessage = resourceProvider.getString(R.string.error_passwords_do_not_match))
+                }
+                return
+            }
         }
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }

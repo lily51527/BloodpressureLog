@@ -65,6 +65,7 @@
     <string name="button_register">註冊</string>
     <string name="link_already_have_account">已有帳號？返回登入</string>
     <string name="error_passwords_do_not_match">兩次輸入的密碼不一致</string>
+    <string name="error_email_required">請輸入 Email</string>
 
     <!-- Email Verification Screen -->
     <string name="screen_title_email_verification">驗證您的 Email</string>
@@ -104,4 +105,5 @@
     <string name="error_auth_operation_not_allowed">此登入方式目前不開放</string>
     <string name="error_auth_requires_recent_login">為保障安全，請重新登入後再試</string>
     <string name="error_auth_generic">操作失敗，請稍後再試</string>
+    <string name="error_sign_in_failed">登入失敗，請稍後再試</string>
 </resources>

@@ -12,10 +12,8 @@ import idv.wennyli.bloodpressurelog.utils.FirestorePaths
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 class BloodPressureRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore,
@@ -56,55 +54,28 @@ class BloodPressureRepositoryImpl @Inject constructor(
     override suspend fun getRecord(id: String): BloodPressureRecord? {
         val collection = recordsCollection()
             ?: throw IllegalStateException(NOT_AUTHENTICATED_MSG)
-        return suspendCancellableCoroutine { continuation ->
-            collection.document(id)
-                .get()
-                .addOnSuccessListener { document ->
-                    continuation.resume(document.toBloodPressureRecord())
-                }
-                .addOnFailureListener { e ->
-                    continuation.resumeWithException(e)
-                }
-        }
+        return collection.document(id).get().await().toBloodPressureRecord()
     }
 
     override suspend fun addRecord(record: BloodPressureRecord) {
         val collection = recordsCollection()
             ?: throw IllegalStateException(NOT_AUTHENTICATED_MSG)
         val now = System.currentTimeMillis()
-        suspendCancellableCoroutine<Unit> { continuation ->
-            collection.add(record.toAddMap(createdAt = now, updatedAt = now))
-                .addOnSuccessListener { continuation.resume(Unit) }
-                .addOnFailureListener { e ->
-                    continuation.resumeWithException(e)
-                }
-        }
+        collection.add(record.toAddMap(createdAt = now, updatedAt = now)).await()
     }
 
     override suspend fun updateRecord(record: BloodPressureRecord) {
         val collection = recordsCollection()
             ?: throw IllegalStateException(NOT_AUTHENTICATED_MSG)
-        suspendCancellableCoroutine<Unit> { continuation ->
-            collection.document(record.id)
-                .set(record.toUpdateMap(updatedAt = System.currentTimeMillis()), SetOptions.merge())
-                .addOnSuccessListener { continuation.resume(Unit) }
-                .addOnFailureListener { e ->
-                    continuation.resumeWithException(e)
-                }
-        }
+        collection.document(record.id)
+            .set(record.toUpdateMap(updatedAt = System.currentTimeMillis()), SetOptions.merge())
+            .await()
     }
 
     override suspend fun deleteRecord(id: String) {
         val collection = recordsCollection()
             ?: throw IllegalStateException(NOT_AUTHENTICATED_MSG)
-        suspendCancellableCoroutine<Unit> { continuation ->
-            collection.document(id)
-                .delete()
-                .addOnSuccessListener { continuation.resume(Unit) }
-                .addOnFailureListener { e ->
-                    continuation.resumeWithException(e)
-                }
-        }
+        collection.document(id).delete().await()
     }
 
     companion object {

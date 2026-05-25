@@ -1,7 +1,9 @@
 package idv.wennyli.bloodpressurelog.data.repository
 
-import com.google.android.gms.tasks.OnFailureListener
-import com.google.android.gms.tasks.OnSuccessListener
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import kotlin.test.assertIs
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
@@ -9,15 +11,15 @@ import com.google.firebase.auth.FirebaseUser
 import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.data.model.AuthException
 import idv.wennyli.bloodpressurelog.utils.ResourceProvider
+import app.cash.turbine.test
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
 
 class AuthRepositoryImplTest {
 
@@ -26,24 +28,83 @@ class AuthRepositoryImplTest {
     private val mockResourceProvider = mockk<ResourceProvider>()
     private lateinit var repository: AuthRepositoryImpl
 
-    @Before
+    @BeforeTest
     fun setUp() {
         every { mockResourceProvider.getString(R.string.error_auth_generic) } returns "操作失敗，請稍後再試"
         repository = AuthRepositoryImpl(mockAuth, mockResourceProvider)
     }
 
+    /** currentUser 應返回 FirebaseAuth 目前登入的使用者物件。 */
     @Test
     fun `currentUser returns auth currentUser`() {
         every { mockAuth.currentUser } returns mockUser
-        assertEquals(mockUser, repository.currentUser)
+        assertThat(repository.currentUser).isEqualTo(mockUser)
     }
 
+    /** 未登入時，currentUser 應返回 null。 */
     @Test
     fun `currentUser returns null when not authenticated`() {
         every { mockAuth.currentUser } returns null
-        assertNull(repository.currentUser)
+        assertThat(repository.currentUser).isNull()
     }
 
+    /** 認證狀態改變時，authStateChanges 應發射對應的使用者物件。 */
+    @Test
+    fun `authStateChanges emits user when auth state changes`() = runTest {
+        deliverAuthState(mockUser)
+
+        repository.authStateChanges.test {
+            assertThat(awaitItem()).isEqualTo(mockUser)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /** 登出時，authStateChanges 應發射 null。 */
+    @Test
+    fun `authStateChanges emits null when user signs out`() = runTest {
+        deliverAuthState(null)
+
+        repository.authStateChanges.test {
+            assertThat(awaitItem()).isNull()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /** Flow 被取消時，authStateChanges 應移除監聽器以避免資源洩漏。 */
+    @Test
+    fun `authStateChanges removes listener when flow is cancelled`() = runTest {
+        deliverAuthState(mockUser)
+
+        repository.authStateChanges.test {
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        verify { mockAuth.removeAuthStateListener(any()) }
+    }
+
+    /** 連續多次認證狀態變化時，authStateChanges 應依序發射每一次狀態。 */
+    @Test
+    fun `authStateChanges emits multiple events in order`() = runTest {
+        every { mockAuth.addAuthStateListener(any()) } answers {
+            val authed = mockk<FirebaseAuth>()
+            every { authed.currentUser } returns mockUser
+            val signedOut = mockk<FirebaseAuth>()
+            every { signedOut.currentUser } returns null
+
+            val listener = firstArg<FirebaseAuth.AuthStateListener>()
+            listener.onAuthStateChanged(authed)
+            listener.onAuthStateChanged(signedOut)
+        }
+        every { mockAuth.removeAuthStateListener(any()) } just Runs
+
+        repository.authStateChanges.test {
+            assertThat(awaitItem()).isEqualTo(mockUser)
+            assertThat(awaitItem()).isNull()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    /** Firebase 登入成功時，signInWithEmail 應正常完成而不拋出例外。 */
     @Test
     fun `signInWithEmail completes on Firebase success`() = runTest {
         val task = buildSuccessTask<AuthResult>(null)
@@ -52,6 +113,7 @@ class AuthRepositoryImplTest {
         repository.signInWithEmail("test@test.com", "password")
     }
 
+    /** Firebase 登入失敗時，signInWithEmail 應拋出含本地化訊息的 AuthException。 */
     @Test
     fun `signInWithEmail throws AuthException with localized message on Firebase failure`() = runTest {
         val exception = RuntimeException("Invalid credentials")
@@ -61,10 +123,25 @@ class AuthRepositoryImplTest {
         val thrown = runCatching { repository.signInWithEmail("test@test.com", "wrong") }
             .exceptionOrNull()
 
-        assertTrue(thrown is AuthException)
-        assertEquals("操作失敗，請稍後再試", thrown?.message)
+        assertIs<AuthException>(thrown)
+        assertThat(thrown.message).isEqualTo("操作失敗，請稍後再試")
     }
 
+    /** Firebase 登入失敗時，signInWithEmail 拋出的 AuthException 應保留原始例外作為 cause。 */
+    @Test
+    fun `signInWithEmail preserves original exception as cause`() = runTest {
+        val original = RuntimeException("Invalid credentials")
+        val task = buildFailureTask<AuthResult>(original)
+        every { mockAuth.signInWithEmailAndPassword(any(), any()) } returns task
+
+        val thrown = runCatching { repository.signInWithEmail("test@test.com", "wrong") }
+            .exceptionOrNull()
+
+        assertIs<AuthException>(thrown)
+        assertThat(thrown.cause).isEqualTo(original)
+    }
+
+    /** Firebase 匿名登入成功時，signInAnonymously 應正常完成而不拋出例外。 */
     @Test
     fun `signInAnonymously completes on Firebase success`() = runTest {
         val task = buildSuccessTask<AuthResult>(null)
@@ -73,6 +150,7 @@ class AuthRepositoryImplTest {
         repository.signInAnonymously()
     }
 
+    /** Firebase 匿名登入失敗時，signInAnonymously 應拋出含本地化訊息的 AuthException。 */
     @Test
     fun `signInAnonymously throws AuthException with localized message on Firebase failure`() = runTest {
         val exception = RuntimeException("Anonymous sign in failed")
@@ -81,10 +159,11 @@ class AuthRepositoryImplTest {
 
         val thrown = runCatching { repository.signInAnonymously() }.exceptionOrNull()
 
-        assertTrue(thrown is AuthException)
-        assertEquals("操作失敗，請稍後再試", thrown?.message)
+        assertIs<AuthException>(thrown)
+        assertThat(thrown.message).isEqualTo("操作失敗，請稍後再試")
     }
 
+    /** signOut 應呼叫 FirebaseAuth 的 signOut，確保使用者登出。 */
     @Test
     fun `signOut calls auth signOut`() = runTest {
         every { mockAuth.signOut() } returns Unit
@@ -94,23 +173,135 @@ class AuthRepositoryImplTest {
         verify { mockAuth.signOut() }
     }
 
-    // region helpers
+    /** Firebase 註冊成功時，registerWithEmail 應正常完成，並對新使用者觸發寄送驗證信。 */
+    @Test
+    fun `registerWithEmail completes and sends verification email on Firebase success`() = runTest {
+        val task = buildSuccessTask<AuthResult>(null)
+        every { mockAuth.createUserWithEmailAndPassword(any(), any()) } returns task
+        every { mockAuth.currentUser } returns mockUser
+        every { mockUser.sendEmailVerification() } returns buildSuccessTask<Void>(null)
 
-    @Suppress("UNCHECKED_CAST")
-    private fun <T> buildSuccessTask(value: Any?): Task<T> = mockk<Task<T>>().apply {
-        every { addOnSuccessListener(any()) } answers {
-            (firstArg() as OnSuccessListener<Any?>).onSuccess(value)
-            this@apply
-        }
-        every { addOnFailureListener(any()) } returns this@apply
+        repository.registerWithEmail("new@test.com", "password123")
+
+        verify { mockUser.sendEmailVerification() }
     }
 
-    private fun <T> buildFailureTask(exception: Exception): Task<T> = mockk<Task<T>>().apply {
-        every { addOnSuccessListener(any()) } returns this@apply
-        every { addOnFailureListener(any()) } answers {
-            firstArg<OnFailureListener>().onFailure(exception)
-            this@apply
+    /** 成功建立帳號但 currentUser 意外為 null 時，registerWithEmail 應靜默略過驗證信。 */
+    @Test
+    fun `registerWithEmail skips verification when currentUser is null after success`() = runTest {
+        val task = buildSuccessTask<AuthResult>(null)
+        every { mockAuth.createUserWithEmailAndPassword(any(), any()) } returns task
+        every { mockAuth.currentUser } returns null
+
+        repository.registerWithEmail("new@test.com", "password123")
+
+        verify(exactly = 0) { mockUser.sendEmailVerification() }
+    }
+
+    /** Firebase 註冊失敗時，registerWithEmail 應拋出含本地化訊息的 AuthException。 */
+    @Test
+    fun `registerWithEmail throws AuthException with localized message on Firebase failure`() = runTest {
+        val exception = RuntimeException("Email already in use")
+        val task = buildFailureTask<AuthResult>(exception)
+        every { mockAuth.createUserWithEmailAndPassword(any(), any()) } returns task
+
+        val thrown = runCatching { repository.registerWithEmail("taken@test.com", "password123") }
+            .exceptionOrNull()
+
+        assertIs<AuthException>(thrown)
+        assertThat(thrown.message).isEqualTo("操作失敗，請稍後再試")
+    }
+
+    /** 已登入時，sendEmailVerification 應正常完成而不拋出例外。 */
+    @Test
+    fun `sendEmailVerification completes on Firebase success`() = runTest {
+        every { mockAuth.currentUser } returns mockUser
+        every { mockUser.sendEmailVerification() } returns buildSuccessTask<Void>(null)
+
+        repository.sendEmailVerification()
+    }
+
+    /** 未登入時，sendEmailVerification 應立即拋出 AuthException，不呼叫 Firebase。 */
+    @Test
+    fun `sendEmailVerification throws AuthException when user is null`() = runTest {
+        every { mockAuth.currentUser } returns null
+
+        val thrown = runCatching { repository.sendEmailVerification() }.exceptionOrNull()
+
+        assertIs<AuthException>(thrown)
+        assertThat(thrown.message).isEqualTo("操作失敗，請稍後再試")
+    }
+
+    /** Firebase 驗證信寄送失敗時，sendEmailVerification 應拋出含本地化訊息的 AuthException。 */
+    @Test
+    fun `sendEmailVerification throws AuthException with localized message on Firebase failure`() = runTest {
+        val exception = RuntimeException("Send email failed")
+        every { mockAuth.currentUser } returns mockUser
+        every { mockUser.sendEmailVerification() } returns buildFailureTask<Void>(exception)
+
+        val thrown = runCatching { repository.sendEmailVerification() }.exceptionOrNull()
+
+        assertIs<AuthException>(thrown)
+        assertThat(thrown.message).isEqualTo("操作失敗，請稍後再試")
+    }
+
+    /** Firebase 重設密碼信寄送成功時，sendPasswordResetEmail 應正常完成而不拋出例外。 */
+    @Test
+    fun `sendPasswordResetEmail completes on Firebase success`() = runTest {
+        val task = buildSuccessTask<Void>(null)
+        every { mockAuth.sendPasswordResetEmail(any()) } returns task
+
+        repository.sendPasswordResetEmail("user@test.com")
+    }
+
+    /** Firebase 重設密碼信寄送失敗時，sendPasswordResetEmail 應拋出含本地化訊息的 AuthException。 */
+    @Test
+    fun `sendPasswordResetEmail throws AuthException with localized message on Firebase failure`() = runTest {
+        val exception = RuntimeException("User not found")
+        val task = buildFailureTask<Void>(exception)
+        every { mockAuth.sendPasswordResetEmail(any()) } returns task
+
+        val thrown = runCatching { repository.sendPasswordResetEmail("nobody@test.com") }
+            .exceptionOrNull()
+
+        assertIs<AuthException>(thrown)
+        assertThat(thrown.message).isEqualTo("操作失敗，請稍後再試")
+    }
+
+    // region helpers
+
+    // 讓 mockAuth.addAuthStateListener 立即觸發 listener，模擬 Firebase 回報指定的認證狀態。
+    // 同時 mock removeAuthStateListener，使 awaitClose 能正常執行而不拋出例外。
+    private fun deliverAuthState(user: FirebaseUser?) {
+        every { mockAuth.addAuthStateListener(any()) } answers {
+            val firebaseAuth = mockk<FirebaseAuth>()
+            every { firebaseAuth.currentUser } returns user
+            firstArg<FirebaseAuth.AuthStateListener>().onAuthStateChanged(firebaseAuth)
         }
+        every { mockAuth.removeAuthStateListener(any()) } just Runs
+    }
+
+    // 模擬一個「已成功完成」的 Firebase Task。
+    // await() 進入時先檢查 isComplete（fast-path）：
+    //   isComplete=true  → 不掛起，直接同步回傳
+    //   exception=null   → 沒有例外，表示成功
+    //   isCanceled=false → 排除「Task 被取消」的情況，確認是真正成功
+    //   result=value     → await() 的回傳值
+    @Suppress("UNCHECKED_CAST")
+    private fun <T> buildSuccessTask(value: Any?): Task<T> = mockk<Task<T>>().apply {
+        every { isComplete } returns true
+        every { isCanceled } returns false
+        every { exception } returns null
+        every { result } returns value as T?
+    }
+
+    // 模擬一個「已失敗完成」的 Firebase Task。
+    // await() 進入時：
+    //   isComplete=true  → 不掛起，直接同步回傳
+    //   exception≠null   → 有例外，await() 直接拋出，不再檢查 isCanceled
+    private fun <T> buildFailureTask(exception: Exception): Task<T> = mockk<Task<T>>().apply {
+        every { isComplete } returns true
+        every { this@apply.exception } returns exception
     }
 
     // endregion

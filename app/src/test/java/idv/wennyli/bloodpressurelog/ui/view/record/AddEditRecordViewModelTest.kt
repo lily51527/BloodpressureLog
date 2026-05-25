@@ -2,38 +2,37 @@ package idv.wennyli.bloodpressurelog.ui.view.record
 
 import app.cash.turbine.test
 import androidx.lifecycle.SavedStateHandle
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import idv.wennyli.bloodpressurelog.MainDispatcherRule
 import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
+import idv.wennyli.bloodpressurelog.domain.usecase.SaveBloodPressureRecordUseCase
+import idv.wennyli.bloodpressurelog.domain.usecase.SaveRecordResult
 import idv.wennyli.bloodpressurelog.utils.ResourceProvider
-import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Rule
-import org.junit.Test
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class AddEditRecordViewModelTest {
 
     @get:Rule
-    val mainDispatcherRule = MainDispatcherRule(UnconfinedTestDispatcher())
+    val mainDispatcherRule = MainDispatcherRule()
 
     private val mockRepository = mockk<BloodPressureRepository>()
+    private val mockSaveRecordUseCase = mockk<SaveBloodPressureRecordUseCase>()
     private val mockResourceProvider = mockk<ResourceProvider>()
 
-    @Before
+    @BeforeTest
     fun setUp() {
         every { mockResourceProvider.getString(R.string.error_record_invalid_input) } returns "請輸入有效的正整數數值"
         every { mockResourceProvider.getString(R.string.error_record_not_found) } returns "找不到紀錄"
@@ -41,68 +40,87 @@ class AddEditRecordViewModelTest {
 
     private fun addModeViewModel() = AddEditRecordViewModel(
         repository = mockRepository,
+        saveRecordUseCase = mockSaveRecordUseCase,
         resourceProvider = mockResourceProvider,
         savedStateHandle = SavedStateHandle(mapOf("recordId" to null)),
     )
 
     private fun editModeViewModel(recordId: String) = AddEditRecordViewModel(
         repository = mockRepository,
+        saveRecordUseCase = mockSaveRecordUseCase,
         resourceProvider = mockResourceProvider,
         savedStateHandle = SavedStateHandle(mapOf("recordId" to recordId)),
     )
 
     // ── Add mode ──
 
+    /** 新增模式下，初始狀態所有輸入欄位應為空且 isEditMode 為 false。 */
     @Test
     fun `add mode initial state has empty fields and isEditMode false`() {
         val viewModel = addModeViewModel()
         val state = viewModel.uiState.value
 
-        assertEquals("", state.systolic)
-        assertEquals("", state.diastolic)
-        assertEquals("", state.pulse)
-        assertEquals("", state.note)
-        assertFalse(state.isEditMode)
-        assertFalse(state.isLoading)
-        assertNull(state.errorMessage)
+        assertThat(state.systolic).isEqualTo("")
+        assertThat(state.diastolic).isEqualTo("")
+        assertThat(state.pulse).isEqualTo("")
+        assertThat(state.note).isEqualTo("")
+        assertThat(state.isEditMode).isFalse()
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.errorMessage).isNull()
     }
 
+    /** 有錯誤訊息時修改收縮壓，應清除先前的錯誤訊息。 */
     @Test
-    fun `onSystolicChange updates systolic and clears errorMessage`() {
+    fun `onSystolicChange clears errorMessage`() {
         val viewModel = addModeViewModel()
+        viewModel.save()
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("請輸入有效的正整數數值")
+
         viewModel.onSystolicChange("120")
-        assertEquals("120", viewModel.uiState.value.systolic)
-        assertNull(viewModel.uiState.value.errorMessage)
+
+        assertThat(viewModel.uiState.value.systolic).isEqualTo("120")
+        assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
+    /** 有錯誤訊息時修改舒張壓，應清除先前的錯誤訊息。 */
     @Test
-    fun `onDiastolicChange updates diastolic`() {
+    fun `onDiastolicChange clears errorMessage`() {
         val viewModel = addModeViewModel()
+        viewModel.save()
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("請輸入有效的正整數數值")
+
         viewModel.onDiastolicChange("80")
-        assertEquals("80", viewModel.uiState.value.diastolic)
+
+        assertThat(viewModel.uiState.value.diastolic).isEqualTo("80")
+        assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
+    /** 有錯誤訊息時修改脈搏，應清除先前的錯誤訊息。 */
     @Test
-    fun `onPulseChange updates pulse`() {
+    fun `onPulseChange clears errorMessage`() {
         val viewModel = addModeViewModel()
+        viewModel.save()
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("請輸入有效的正整數數值")
+
         viewModel.onPulseChange("72")
-        assertEquals("72", viewModel.uiState.value.pulse)
+
+        assertThat(viewModel.uiState.value.pulse).isEqualTo("72")
+        assertThat(viewModel.uiState.value.errorMessage).isNull()
     }
 
+    /** 使用者修改備註輸入時，應保留先前的錯誤訊息（備註欄不觸發錯誤清除）。 */
     @Test
-    fun `onNoteChange updates note`() {
+    fun `onNoteChange does not clear errorMessage`() {
         val viewModel = addModeViewModel()
-        viewModel.onNoteChange("運動後")
-        assertEquals("運動後", viewModel.uiState.value.note)
+        viewModel.save()
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("請輸入有效的正整數數值")
+
+        viewModel.onNoteChange("備註")
+
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("請輸入有效的正整數數值")
     }
 
-    @Test
-    fun `onRecordedAtChange updates recordedAt`() {
-        val viewModel = addModeViewModel()
-        viewModel.onRecordedAtChange(123456789L)
-        assertEquals(123456789L, viewModel.uiState.value.recordedAt)
-    }
-
+    /** 收縮壓輸入非數字時，儲存應顯示輸入無效的錯誤訊息。 */
     @Test
     fun `save with invalid systolic sets errorMessage`() {
         val viewModel = addModeViewModel()
@@ -112,9 +130,10 @@ class AddEditRecordViewModelTest {
 
         viewModel.save()
 
-        assertEquals("請輸入有效的正整數數值", viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("請輸入有效的正整數數值")
     }
 
+    /** 收縮壓輸入為 0 時，儲存應顯示輸入無效的錯誤訊息。 */
     @Test
     fun `save with zero systolic sets errorMessage`() {
         val viewModel = addModeViewModel()
@@ -124,21 +143,86 @@ class AddEditRecordViewModelTest {
 
         viewModel.save()
 
-        assertEquals("請輸入有效的正整數數值", viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("請輸入有效的正整數數值")
     }
 
+    /** 所有輸入欄位為空時，儲存應顯示輸入無效的錯誤訊息。 */
     @Test
     fun `save with empty fields sets errorMessage`() {
         val viewModel = addModeViewModel()
 
         viewModel.save()
 
-        assertEquals("請輸入有效的正整數數值", viewModel.uiState.value.errorMessage)
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("請輸入有效的正整數數值")
     }
 
+    /** 收縮壓輸入為負數時，儲存應顯示輸入無效的錯誤訊息。 */
     @Test
-    fun `save success in add mode emits savedSuccessfully`() = runTest {
-        coEvery { mockRepository.addRecord(any()) } just Runs
+    fun `save with negative systolic sets errorMessage`() {
+        val viewModel = addModeViewModel()
+        viewModel.onSystolicChange("-1")
+        viewModel.onDiastolicChange("80")
+        viewModel.onPulseChange("72")
+
+        viewModel.save()
+
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("請輸入有效的正整數數值")
+    }
+
+    /** 舒張壓輸入為 0 時，儲存應顯示輸入無效的錯誤訊息。 */
+    @Test
+    fun `save with zero diastolic sets errorMessage`() {
+        val viewModel = addModeViewModel()
+        viewModel.onSystolicChange("120")
+        viewModel.onDiastolicChange("0")
+        viewModel.onPulseChange("72")
+
+        viewModel.save()
+
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("請輸入有效的正整數數值")
+    }
+
+    /** 脈搏輸入非數字時，儲存應顯示輸入無效的錯誤訊息。 */
+    @Test
+    fun `save with invalid pulse sets errorMessage`() {
+        val viewModel = addModeViewModel()
+        viewModel.onSystolicChange("120")
+        viewModel.onDiastolicChange("80")
+        viewModel.onPulseChange("abc")
+
+        viewModel.save()
+
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("請輸入有效的正整數數值")
+    }
+
+    /** 驗證通過後，應將解析後的 Int 值傳給 SaveRecordUseCase。 */
+    @Test
+    fun `save passes parsed int values to saveRecordUseCase`() = runTest {
+        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Success
+        val viewModel = addModeViewModel()
+        viewModel.onSystolicChange("120")
+        viewModel.onDiastolicChange("80")
+        viewModel.onPulseChange("72")
+        viewModel.onNoteChange("運動後")
+
+        viewModel.save()
+
+        coVerify {
+            mockSaveRecordUseCase(
+                recordId = null,
+                systolic = 120,
+                diastolic = 80,
+                pulse = 72,
+                note = "運動後",
+                recordedAt = any(),
+            )
+        }
+    }
+
+    /** 新增模式儲存成功後，應發射 savedSuccessfully 事件並重置 isLoading。 */
+    @Test
+    fun `save success in add mode emits savedSuccessfully and resets isLoading`() = runTest {
+        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Success
         val viewModel = addModeViewModel()
         viewModel.onSystolicChange("120")
         viewModel.onDiastolicChange("80")
@@ -149,11 +233,14 @@ class AddEditRecordViewModelTest {
             awaitItem()
             cancelAndIgnoreRemainingEvents()
         }
+
+        assertThat(viewModel.uiState.value.isLoading).isFalse()
     }
 
+    /** 新增模式儲存失敗時，應顯示錯誤訊息並清除載入狀態。 */
     @Test
-    fun `save error in add mode sets errorMessage`() = runTest {
-        coEvery { mockRepository.addRecord(any()) } throws RuntimeException("Network error")
+    fun `save error in add mode sets errorMessage and resets isLoading`() = runTest {
+        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Error("Network error")
         val viewModel = addModeViewModel()
         viewModel.onSystolicChange("120")
         viewModel.onDiastolicChange("80")
@@ -161,12 +248,28 @@ class AddEditRecordViewModelTest {
 
         viewModel.save()
 
-        assertEquals("Network error", viewModel.uiState.value.errorMessage)
-        assertFalse(viewModel.uiState.value.isLoading)
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("Network error")
+        assertThat(viewModel.uiState.value.isLoading).isFalse()
+    }
+
+    /** UseCase 回傳 Error(null) 時，應顯示 fallback 錯誤訊息。 */
+    @Test
+    fun `save error with null message shows fallback error`() = runTest {
+        every { mockResourceProvider.getString(R.string.error_record_save_failed) } returns "儲存失敗"
+        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Error(null)
+        val viewModel = addModeViewModel()
+        viewModel.onSystolicChange("120")
+        viewModel.onDiastolicChange("80")
+        viewModel.onPulseChange("72")
+
+        viewModel.save()
+
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("儲存失敗")
     }
 
     // ── Edit mode ──
 
+    /** 編輯模式啟動時，應從 Repository 載入紀錄並填入所有欄位。 */
     @Test
     fun `edit mode loads record from repository`() = runTest {
         val record = BloodPressureRecord(
@@ -183,16 +286,16 @@ class AddEditRecordViewModelTest {
         val viewModel = editModeViewModel("record-1")
         val state = viewModel.uiState.value
 
-        assertEquals("130", state.systolic)
-        assertEquals("85", state.diastolic)
-        assertEquals("75", state.pulse)
-        assertEquals("after exercise", state.note)
-        assertEquals(1000L, state.recordedAt)
-        assertEquals(500L, state.originalCreatedAt)
-        assertTrue(state.isEditMode)
-        assertFalse(state.isLoading)
+        assertThat(state.systolic).isEqualTo("130")
+        assertThat(state.diastolic).isEqualTo("85")
+        assertThat(state.pulse).isEqualTo("75")
+        assertThat(state.note).isEqualTo("after exercise")
+        assertThat(state.recordedAt).isEqualTo(1000L)
+        assertThat(state.isEditMode).isTrue()
+        assertThat(state.isLoading).isFalse()
     }
 
+    /** 編輯模式找不到指定紀錄時，應顯示找不到紀錄的錯誤訊息。 */
     @Test
     fun `edit mode shows error when record is not found`() = runTest {
         coEvery { mockRepository.getRecord("missing-id") } returns null
@@ -200,10 +303,11 @@ class AddEditRecordViewModelTest {
         val viewModel = editModeViewModel("missing-id")
         val state = viewModel.uiState.value
 
-        assertEquals("找不到紀錄", state.errorMessage)
-        assertFalse(state.isLoading)
+        assertThat(state.errorMessage).isEqualTo("找不到紀錄")
+        assertThat(state.isLoading).isFalse()
     }
 
+    /** 編輯模式讀取紀錄失敗時，應顯示對應的錯誤訊息。 */
     @Test
     fun `edit mode shows error when getRecord fails`() = runTest {
         coEvery { mockRepository.getRecord("record-1") } throws RuntimeException("Network error")
@@ -211,12 +315,55 @@ class AddEditRecordViewModelTest {
         val viewModel = editModeViewModel("record-1")
         val state = viewModel.uiState.value
 
-        assertEquals("Network error", state.errorMessage)
-        assertFalse(state.isLoading)
+        assertThat(state.errorMessage).isEqualTo("Network error")
+        assertThat(state.isLoading).isFalse()
     }
 
+    /** 載入紀錄時例外的 message 為 null，應顯示 fallback 錯誤訊息。 */
     @Test
-    fun `save in edit mode calls updateRecord with preserved createdAt`() = runTest {
+    fun `load record error with null exception message shows fallback error`() = runTest {
+        every { mockResourceProvider.getString(R.string.error_record_load_failed) } returns "載入失敗"
+        coEvery { mockRepository.getRecord("record-1") } throws RuntimeException(null as String?)
+
+        val viewModel = editModeViewModel("record-1")
+        val state = viewModel.uiState.value
+
+        assertThat(state.errorMessage).isEqualTo("載入失敗")
+        assertThat(state.isLoading).isFalse()
+    }
+
+    /** 編輯模式儲存時，應以載入的紀錄值呼叫 SaveRecordUseCase。 */
+    @Test
+    fun `save in edit mode passes loaded record values to saveRecordUseCase`() = runTest {
+        val record = BloodPressureRecord(
+            id = "record-1",
+            systolic = 130,
+            diastolic = 85,
+            pulse = 75,
+            note = "",
+            recordedAt = 1000L,
+        )
+        coEvery { mockRepository.getRecord("record-1") } returns record
+        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Success
+
+        val viewModel = editModeViewModel("record-1")
+        viewModel.save()
+
+        coVerify {
+            mockSaveRecordUseCase(
+                recordId = "record-1",
+                systolic = 130,
+                diastolic = 85,
+                pulse = 75,
+                note = "",
+                recordedAt = 1000L,
+            )
+        }
+    }
+
+    /** 編輯模式儲存失敗時，應顯示錯誤訊息並清除載入狀態。 */
+    @Test
+    fun `save error in edit mode sets errorMessage and resets isLoading`() = runTest {
         val record = BloodPressureRecord(
             id = "record-1",
             systolic = 130,
@@ -227,18 +374,16 @@ class AddEditRecordViewModelTest {
             createdAt = 500L,
         )
         coEvery { mockRepository.getRecord("record-1") } returns record
-        coEvery { mockRepository.updateRecord(any()) } just Runs
+        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Error("Update failed")
 
         val viewModel = editModeViewModel("record-1")
         viewModel.save()
 
-        coVerify {
-            mockRepository.updateRecord(
-                match { it.id == "record-1" && it.createdAt == 500L && it.systolic == 130 },
-            )
-        }
+        assertThat(viewModel.uiState.value.errorMessage).isEqualTo("Update failed")
+        assertThat(viewModel.uiState.value.isLoading).isFalse()
     }
 
+    /** 編輯模式儲存成功後，應發射 savedSuccessfully 事件通知 UI 操作完成。 */
     @Test
     fun `save success in edit mode emits savedSuccessfully`() = runTest {
         val record = BloodPressureRecord(
@@ -250,7 +395,7 @@ class AddEditRecordViewModelTest {
             recordedAt = 1000L,
         )
         coEvery { mockRepository.getRecord("record-1") } returns record
-        coEvery { mockRepository.updateRecord(any()) } just Runs
+        coEvery { mockSaveRecordUseCase(any(), any(), any(), any(), any(), any()) } returns SaveRecordResult.Success
 
         val viewModel = editModeViewModel("record-1")
 

@@ -298,6 +298,18 @@ private fun TrendsLoadingPreview() {
     }
 }
 
+@Preview(showBackground = true, name = "Trends - Error")
+@Composable
+private fun TrendsErrorPreview() {
+    BloodPressureLogTheme {
+        TrendsContent(
+            uiState = TrendsUiState(isLoading = false, errorMessage = "載入失敗"),
+            onRangeChange = {},
+            onMetricChange = {},
+        )
+    }
+}
+
 @Composable
 private fun TrendRange.displayLabel(): String = stringResource(this.labelRes)
 

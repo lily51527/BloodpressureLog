@@ -3,7 +3,9 @@ package idv.wennyli.bloodpressurelog.ui.view.login
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
+import idv.wennyli.bloodpressurelog.utils.ResourceProvider
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -24,6 +26,7 @@ data class LoginUiState(
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val authRepository: AuthRepository,
+    private val resourceProvider: ResourceProvider,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -49,11 +52,23 @@ class LoginViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
                 authRepository.signInWithEmail(state.email, state.password)
-                if (authRepository.currentUser?.isEmailVerified == true) {
-                    _navigateToMain.emit(Unit)
-                } else {
-                    _uiState.update { it.copy(isLoading = false) }
-                    _navigateToEmailVerification.emit(Unit)
+                val currentUser = authRepository.currentUser
+                when {
+                    currentUser == null -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                errorMessage = resourceProvider.getString(R.string.error_sign_in_failed),
+                            )
+                        }
+                    }
+                    currentUser.isEmailVerified -> {
+                        _navigateToMain.emit(Unit)
+                    }
+                    else -> {
+                        _uiState.update { it.copy(isLoading = false) }
+                        _navigateToEmailVerification.emit(Unit)
+                    }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "") }
