@@ -58,6 +58,18 @@ import idv.wennyli.bloodpressurelog.utils.DateUtils
 import java.time.Instant
 import java.time.ZoneId
 
+/**
+ * 血壓新增／編輯畫面的入口 Composable。
+ *
+ * 負責：
+ * - 收集 [AddEditRecordViewModel] 的 [AddEditRecordUiState]
+ * - 監聽 [AddEditRecordViewModel.savedSuccessfully] 儲存成功事件
+ * - 依 [stayOnScreen] 決定儲存後行為：`true` 時重設表單（連續新增模式），`false` 時返回上一頁
+ *
+ * @param onNavigateBack 返回上一頁的回呼
+ * @param stayOnScreen 儲存成功後是否留在畫面（連續新增模式）；預設 `false`（儲存後離開）
+ * @param viewModel 由 Hilt 提供的 ViewModel 實例
+ */
 @Composable
 fun AddEditRecordScreen(
     onNavigateBack: () -> Unit,
@@ -93,6 +105,23 @@ fun AddEditRecordScreen(
     )
 }
 
+/**
+ * 血壓新增／編輯畫面的 UI 內容層（無狀態 Composable）。
+ *
+ * 包含：收縮壓／舒張壓／脈搏／備註輸入欄位、日期與時間選擇器按鈕、
+ * 錯誤訊息顯示，以及儲存按鈕（儲存中顯示進度指示器）。
+ *
+ * @param uiState 當前 UI 狀態
+ * @param onNavigateBack 返回上一頁的回呼
+ * @param showNavigateBack 是否顯示 TopAppBar 的返回按鈕；預設 `true`
+ * @param snackbarHostState 用於顯示儲存成功 Snackbar 的狀態物件
+ * @param onSystolicChange 收縮壓輸入變更回呼
+ * @param onDiastolicChange 舒張壓輸入變更回呼
+ * @param onPulseChange 脈搏輸入變更回呼
+ * @param onNoteChange 備註輸入變更回呼
+ * @param onRecordedAtChange 記錄時間變更回呼（epoch milliseconds）
+ * @param onSave 儲存按鈕點擊回呼
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AddEditRecordContent(
@@ -253,6 +282,15 @@ internal fun AddEditRecordContent(
     }
 }
 
+/**
+ * 日期選擇對話框。
+ *
+ * 使用者選取新日期後，保留 [recordedAt] 原有的時、分，合併成新的 epoch milliseconds 回傳。
+ *
+ * @param recordedAt 目前的記錄時間（epoch milliseconds），用來初始化選取日期與保留時間部分
+ * @param onConfirm 使用者確認選取後的回呼，傳入合併後的新時間（epoch milliseconds）
+ * @param onDismiss 使用者取消或關閉對話框的回呼
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RecordDatePickerDialog(
@@ -294,6 +332,15 @@ private fun RecordDatePickerDialog(
     }
 }
 
+/**
+ * 時間選擇對話框。
+ *
+ * 使用者選取新時間後，保留 [recordedAt] 原有的日期部分，合併成新的 epoch milliseconds 回傳。
+ *
+ * @param recordedAt 目前的記錄時間（epoch milliseconds），用來初始化選取時間與保留日期部分
+ * @param onConfirm 使用者確認選取後的回呼，傳入合併後的新時間（epoch milliseconds）
+ * @param onDismiss 使用者取消或關閉對話框的回呼
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RecordTimePickerDialog(
@@ -332,6 +379,21 @@ private fun RecordTimePickerDialog(
     )
 }
 
+/**
+ * 通用的單行／多行文字輸入欄位（[OutlinedTextField] 的封裝）。
+ *
+ * @param value 當前輸入值
+ * @param onValueChange 輸入內容變更回呼
+ * @param label 欄位標籤文字
+ * @param keyboardActions 鍵盤動作回呼（如 Next、Done）
+ * @param modifier 外部傳入的 Modifier，預設填滿寬度
+ * @param enabled 是否允許輸入；儲存中時應設為 `false`
+ * @param keyboardType 鍵盤類型；預設 [KeyboardType.Number]（數字鍵盤）
+ * @param imeAction IME 動作按鈕類型；預設 [ImeAction.Next]
+ * @param singleLine 是否單行模式；預設 `true`
+ * @param minLines 最小顯示行數；預設 `1`
+ * @param maxLines 最大顯示行數；預設 `1`
+ */
 @Composable
 private fun RecordFormField(
     value: String,

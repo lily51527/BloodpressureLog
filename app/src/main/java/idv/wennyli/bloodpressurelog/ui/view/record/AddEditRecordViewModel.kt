@@ -54,6 +54,10 @@ class AddEditRecordViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 依 [id] 從 Repository 載入既有血壓紀錄，並將各欄位填入 [uiState]。
+     * 找不到紀錄時顯示「找不到紀錄」錯誤；發生例外時顯示例外訊息或預設錯誤訊息。
+     */
     private fun loadRecord(id: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -85,26 +89,36 @@ class AddEditRecordViewModel @Inject constructor(
         }
     }
 
+    /** 更新收縮壓（systolic）輸入值，並清除既有的錯誤訊息。 */
     fun onSystolicChange(value: String) {
         _uiState.update { it.copy(systolic = value, errorMessage = null) }
     }
 
+    /** 更新舒張壓（diastolic）輸入值，並清除既有的錯誤訊息。 */
     fun onDiastolicChange(value: String) {
         _uiState.update { it.copy(diastolic = value, errorMessage = null) }
     }
 
+    /** 更新脈搏（pulse）輸入值，並清除既有的錯誤訊息。 */
     fun onPulseChange(value: String) {
         _uiState.update { it.copy(pulse = value, errorMessage = null) }
     }
 
+    /** 更新備註（note）輸入值。 */
     fun onNoteChange(value: String) {
         _uiState.update { it.copy(note = value) }
     }
 
+    /** 更新紀錄時間（[value] 為 epoch milliseconds）。 */
     fun onRecordedAtChange(value: Long) {
         _uiState.update { it.copy(recordedAt = value) }
     }
 
+    /**
+     * 重設表單至初始狀態：清空所有輸入欄位（收縮壓、舒張壓、脈搏、備註）、
+     * 清除錯誤訊息、解除載入狀態，並將記錄時間重設為當前時間。
+     * 新增模式下儲存成功後呼叫此方法，以便快速連續輸入下一筆。
+     */
     fun resetForm() {
         _uiState.update {
             it.copy(
@@ -119,6 +133,13 @@ class AddEditRecordViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 驗證輸入欄位後，透過 [SaveBloodPressureRecordUseCase] 儲存血壓紀錄。
+     *
+     * - 輸入不合法（非正整數）時：更新 [uiState] 的 [AddEditRecordUiState.errorMessage]，直接返回。
+     * - 儲存成功時：發射 [savedSuccessfully] 事件，由 Screen 決定後續導航或重設表單。
+     * - 儲存失敗時：將錯誤訊息寫入 [AddEditRecordUiState.errorMessage]。
+     */
     fun save() {
         val state = _uiState.value
         val systolic = state.systolic.toIntOrNull()
