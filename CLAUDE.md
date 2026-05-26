@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-**MVVM + Hilt DI + Jetpack Compose**，targeting Android 7.0+ (minSdk 24)。
+**MVVM + Hilt DI + Jetpack Compose**，targeting Android 9.0+ (minSdk 28)。
 
 ### Package Structure
 
@@ -114,6 +114,10 @@ sealed interface DataState<out T> {
 - `BuildChartDataUseCase`：將 records 依日期分組、計算各日平均值，x 軸為相對於 startDate 的 dayIndex，並產生對應天數的 x 軸標籤（格式 `M/d`）
 - `SaveBloodPressureRecordUseCase`：依 `recordId` 是否為 null 決定呼叫 `addRecord` 或 `updateRecord`，例外統一轉為 `SaveRecordResult.Error`
 - `AuthException`：`AuthRepositoryImpl` 將 Firebase 例外轉換為本地化訊息後以此包裝拋出，ViewModel 直接取用 `message` 顯示
+
+### ResourceProvider 模式
+
+`ResourceProvider` 介面封裝 `context.getString()`，由 Hilt 注入 `ResourceProviderImpl`。ViewModel 依賴此介面而非 Android `Context`，unit test 時直接 mock 介面，不需 Robolectric。
 
 ### TrendsViewModel 資料流設計
 
