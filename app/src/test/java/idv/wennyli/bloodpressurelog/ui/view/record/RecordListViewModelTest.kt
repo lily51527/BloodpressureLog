@@ -98,6 +98,38 @@ class RecordListViewModelTest {
         assertThat(state.errorMessage).isEqualTo("Firestore error")
     }
 
+    /** Flow 先發射 Loading 再發射 Error 時，最終應清除載入狀態並顯示錯誤訊息。 */
+    @Test
+    fun `loading then error clears isLoading and sets errorMessage`() {
+        val error = RuntimeException("Firestore error")
+        every { mockRepository.observeRecords(any(), any()) } returns flowOf(
+            DataState.Loading,
+            DataState.Error(error, "Firestore error"),
+        )
+
+        viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
+
+        val state = viewModel.uiState.value
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.errorMessage).isEqualTo("Firestore error")
+    }
+
+    /** Flow 先發射 Loading 再發射 Success 時，最終應清除載入狀態並顯示排序後的紀錄。 */
+    @Test
+    fun `loading then success clears isLoading and populates records`() {
+        every { mockRepository.observeRecords(any(), any()) } returns flowOf(
+            DataState.Loading,
+            DataState.Success(sampleRecords),
+        )
+
+        viewModel = RecordListViewModel(mockRepository, mockAuthRepository, mockResourceProvider)
+
+        val state = viewModel.uiState.value
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.errorMessage).isNull()
+        assertThat(state.records.map { it.id }).containsExactly("1", "3", "2")
+    }
+
     /** 資料載入中時，isLoading 應為 true 以顯示載入指示器。 */
     @Test
     fun `loading state sets isLoading true`() {
