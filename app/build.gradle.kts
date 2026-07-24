@@ -69,6 +69,7 @@ dependencies {
     implementation(libs.timber)
     implementation(libs.kotlinx.coroutines.play.services)
     ksp(libs.hilt.compiler)
+
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
