@@ -15,34 +15,26 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -59,10 +51,9 @@ import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.data.model.TimeSlot
 import idv.wennyli.bloodpressurelog.data.model.bloodPressureLevel
 import idv.wennyli.bloodpressurelog.data.model.timeSlot
+import idv.wennyli.bloodpressurelog.ui.common.DateRangeFilterBar
 import idv.wennyli.bloodpressurelog.ui.theme.BloodPressureLogTheme
 import idv.wennyli.bloodpressurelog.utils.DateUtils
-
-private enum class DatePickerTarget { NONE, START, END }
 
 @Composable
 fun RecordListScreen(
@@ -118,54 +109,6 @@ internal fun RecordListContent(
     onDeleteRecord: (String) -> Unit,
     onDateRangeConfirmed: (startMs: Long, endMs: Long) -> Unit = { _, _ -> },
 ) {
-    var pendingStartUtcMs by remember(uiState.filter) {
-        mutableLongStateOf(DateUtils.toUtcMidnightMillis(uiState.filter.startMs))
-    }
-    var pendingEndUtcMs by remember(uiState.filter) {
-        mutableLongStateOf(DateUtils.toUtcMidnightMillis(uiState.filter.endMs))
-    }
-    var showPicker by remember { mutableStateOf(DatePickerTarget.NONE) }
-
-    when (showPicker) {
-        DatePickerTarget.START -> {
-            val state = rememberDatePickerState(initialSelectedDateMillis = pendingStartUtcMs)
-            DatePickerDialog(
-                onDismissRequest = { showPicker = DatePickerTarget.NONE },
-                confirmButton = {
-                    TextButton(onClick = {
-                        state.selectedDateMillis?.let { pendingStartUtcMs = it }
-                        showPicker = DatePickerTarget.NONE
-                    }) { Text(stringResource(R.string.common_button_confirm)) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showPicker = DatePickerTarget.NONE }) {
-                        Text(stringResource(R.string.common_button_cancel))
-                    }
-                },
-            ) { DatePicker(state = state) }
-        }
-
-        DatePickerTarget.END -> {
-            val state = rememberDatePickerState(initialSelectedDateMillis = pendingEndUtcMs)
-            DatePickerDialog(
-                onDismissRequest = { showPicker = DatePickerTarget.NONE },
-                confirmButton = {
-                    TextButton(onClick = {
-                        state.selectedDateMillis?.let { pendingEndUtcMs = it }
-                        showPicker = DatePickerTarget.NONE
-                    }) { Text(stringResource(R.string.common_button_confirm)) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showPicker = DatePickerTarget.NONE }) {
-                        Text(stringResource(R.string.common_button_cancel))
-                    }
-                },
-            ) { DatePicker(state = state) }
-        }
-
-        DatePickerTarget.NONE -> Unit
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -183,17 +126,10 @@ internal fun RecordListContent(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            DateFilterRow(
-                pendingStartUtcMs = pendingStartUtcMs,
-                pendingEndUtcMs = pendingEndUtcMs,
-                onStartClick = { showPicker = DatePickerTarget.START },
-                onEndClick = { showPicker = DatePickerTarget.END },
-                onSearch = {
-                    onDateRangeConfirmed(
-                        DateUtils.utcMidnightToStartOfDay(pendingStartUtcMs),
-                        DateUtils.utcMidnightToEndOfDay(pendingEndUtcMs),
-                    )
-                },
+            DateRangeFilterBar(
+                startMs = uiState.filter.startMs,
+                endMs = uiState.filter.endMs,
+                onDateRangeConfirmed = onDateRangeConfirmed,
             )
             Box(modifier = Modifier.weight(1f)) {
                 when {
@@ -237,62 +173,6 @@ internal fun RecordListContent(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun DateFilterRow(
-    pendingStartUtcMs: Long,
-    pendingEndUtcMs: Long,
-    onStartClick: () -> Unit,
-    onEndClick: () -> Unit,
-    onSearch: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        OutlinedButton(
-            onClick = onStartClick,
-            shape = RoundedCornerShape(50),
-            modifier = Modifier.weight(1f),
-        ) {
-            Icon(
-                imageVector = Icons.Default.DateRange,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = DateUtils.formatDate(DateUtils.utcMidnightToStartOfDay(pendingStartUtcMs)),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-        OutlinedButton(
-            onClick = onEndClick,
-            shape = RoundedCornerShape(50),
-            modifier = Modifier.weight(1f),
-        ) {
-            Icon(
-                imageVector = Icons.Default.DateRange,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = DateUtils.formatDate(DateUtils.utcMidnightToStartOfDay(pendingEndUtcMs)),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-        IconButton(onClick = onSearch) {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = stringResource(R.string.record_list_cd_search),
-            )
         }
     }
 }
