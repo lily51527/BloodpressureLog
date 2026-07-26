@@ -50,6 +50,9 @@
     <string name="record_list_time_slot_afternoon">下午</string>
     <string name="record_list_time_slot_evening">晚間</string>
     <string name="record_list_time_slot_night">深夜</string>
+    <string name="record_list_filter_start_date">開始日期</string>
+    <string name="record_list_filter_end_date">結束日期</string>
+    <string name="record_list_cd_search">搜尋</string>
 
     <!-- Add / Edit Record Screen -->
     <string name="add_edit_record_screen_title_add">新增紀錄</string>

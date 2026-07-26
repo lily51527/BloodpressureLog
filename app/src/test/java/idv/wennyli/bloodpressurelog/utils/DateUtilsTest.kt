@@ -2,8 +2,11 @@ package idv.wennyli.bloodpressurelog.utils
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThan
+import assertk.assertions.isLessThan
 import kotlin.test.Test
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -93,5 +96,120 @@ class DateUtilsTest {
         val roundTripped = DateUtils.combineDateAndTime(utcMidnight, 22, 45)
         assertThat(DateUtils.formatDate(roundTripped)).isEqualTo(DateUtils.formatDate(original))
         assertThat(DateUtils.formatTime(roundTripped)).isEqualTo(DateUtils.formatTime(original))
+    }
+
+    // ── startOfDay / endOfDay ───────────────────────────────────────────────────
+
+    /** startOfDay(0) 應回傳今天 00:00:00.000 的 timestamp。 */
+    @Test
+    fun `startOfDay with daysAgo 0 returns start of today`() {
+        val result = DateUtils.startOfDay(daysAgo = 0)
+        val zoned = Instant.ofEpochMilli(result).atZone(ZoneId.systemDefault())
+
+        assertThat(zoned.hour).isEqualTo(0)
+        assertThat(zoned.minute).isEqualTo(0)
+        assertThat(zoned.second).isEqualTo(0)
+        assertThat(zoned.nano).isEqualTo(0)
+        assertThat(zoned.toLocalDate()).isEqualTo(LocalDate.now(ZoneId.systemDefault()))
+    }
+
+    /** startOfDay(29) 應回傳 29 天前當天 00:00:00.000 的 timestamp。 */
+    @Test
+    fun `startOfDay with daysAgo 29 returns start of day 29 days ago`() {
+        val result = DateUtils.startOfDay(daysAgo = 29)
+        val zoned = Instant.ofEpochMilli(result).atZone(ZoneId.systemDefault())
+        val expected = LocalDate.now(ZoneId.systemDefault()).minusDays(29)
+
+        assertThat(zoned.hour).isEqualTo(0)
+        assertThat(zoned.minute).isEqualTo(0)
+        assertThat(zoned.second).isEqualTo(0)
+        assertThat(zoned.toLocalDate()).isEqualTo(expected)
+    }
+
+    /** endOfDay(0) 應回傳今天 23:59:59.999 的 timestamp。 */
+    @Test
+    fun `endOfDay with daysAgo 0 returns end of today`() {
+        val result = DateUtils.endOfDay(daysAgo = 0)
+        val zoned = Instant.ofEpochMilli(result).atZone(ZoneId.systemDefault())
+
+        assertThat(zoned.hour).isEqualTo(23)
+        assertThat(zoned.minute).isEqualTo(59)
+        assertThat(zoned.second).isEqualTo(59)
+        assertThat(zoned.toLocalDate()).isEqualTo(LocalDate.now(ZoneId.systemDefault()))
+    }
+
+    /** startOfDay 的結果必須嚴格小於 endOfDay 同一天，確保篩選範圍正確。 */
+    @Test
+    fun `startOfDay is strictly less than endOfDay for same day`() {
+        val start = DateUtils.startOfDay(daysAgo = 0)
+        val end = DateUtils.endOfDay(daysAgo = 0)
+
+        assertThat(start).isLessThan(end)
+    }
+
+    /** startOfDay(29) 篩選起點應嚴格小於 endOfDay(0) 篩選終點（預設 30 天範圍有效）。 */
+    @Test
+    fun `default 30 day range start is less than end`() {
+        val start = DateUtils.startOfDay(daysAgo = 29)
+        val end = DateUtils.endOfDay(daysAgo = 0)
+
+        assertThat(start).isLessThan(end)
+    }
+
+    // ── utcMidnightToStartOfDay / utcMidnightToEndOfDay ────────────────────────
+
+    /**
+     * utcMidnightToStartOfDay 回傳的 timestamp 在本地時區解析後，
+     * 小時應為 0，且日期與 UTC 午夜所代表的日期相同。
+     */
+    @Test
+    fun `utcMidnightToStartOfDay returns local start of that date`() {
+        val utcMidnight = LocalDate.of(2024, 5, 20)
+            .atStartOfDay(ZoneOffset.UTC)
+            .toInstant()
+            .toEpochMilli()
+
+        val result = DateUtils.utcMidnightToStartOfDay(utcMidnight)
+        val zoned = Instant.ofEpochMilli(result).atZone(ZoneId.systemDefault())
+
+        assertThat(zoned.hour).isEqualTo(0)
+        assertThat(zoned.minute).isEqualTo(0)
+        assertThat(zoned.second).isEqualTo(0)
+        assertThat(zoned.toLocalDate()).isEqualTo(LocalDate.of(2024, 5, 20))
+    }
+
+    /**
+     * utcMidnightToEndOfDay 回傳的 timestamp 在本地時區解析後，
+     * 時間應為 23:59:59，且日期與 UTC 午夜所代表的日期相同。
+     */
+    @Test
+    fun `utcMidnightToEndOfDay returns local end of that date`() {
+        val utcMidnight = LocalDate.of(2024, 5, 20)
+            .atStartOfDay(ZoneOffset.UTC)
+            .toInstant()
+            .toEpochMilli()
+
+        val result = DateUtils.utcMidnightToEndOfDay(utcMidnight)
+        val zoned = Instant.ofEpochMilli(result).atZone(ZoneId.systemDefault())
+
+        assertThat(zoned.hour).isEqualTo(23)
+        assertThat(zoned.minute).isEqualTo(59)
+        assertThat(zoned.second).isEqualTo(59)
+        assertThat(zoned.toLocalDate()).isEqualTo(LocalDate.of(2024, 5, 20))
+    }
+
+    /** utcMidnightToStartOfDay 的結果必須嚴格小於 utcMidnightToEndOfDay 同一天。 */
+    @Test
+    fun `utcMidnightToStartOfDay is less than utcMidnightToEndOfDay for same date`() {
+        val utcMidnight = LocalDate.of(2024, 5, 20)
+            .atStartOfDay(ZoneOffset.UTC)
+            .toInstant()
+            .toEpochMilli()
+
+        val start = DateUtils.utcMidnightToStartOfDay(utcMidnight)
+        val end = DateUtils.utcMidnightToEndOfDay(utcMidnight)
+
+        assertThat(start).isLessThan(end)
+        assertThat(start).isGreaterThan(0L)
     }
 }

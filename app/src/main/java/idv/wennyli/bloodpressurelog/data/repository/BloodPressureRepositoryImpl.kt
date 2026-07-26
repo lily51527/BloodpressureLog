@@ -26,7 +26,7 @@ class BloodPressureRepositoryImpl @Inject constructor(
         firestore.collection(FirestorePaths.bloodPressures(BuildConfig.APP_ID, uid))
     }
 
-    override fun observeRecords(): Flow<DataState<List<BloodPressureRecord>>> = callbackFlow {
+    override fun observeRecords(startMs: Long?, endMs: Long?): Flow<DataState<List<BloodPressureRecord>>> = callbackFlow {
         val collection = recordsCollection()
         if (collection == null) {
             trySend(
@@ -39,7 +39,10 @@ class BloodPressureRepositoryImpl @Inject constructor(
             return@callbackFlow
         }
         trySend(DataState.Loading)
-        val subscription = collection
+        var query: Query = collection
+        if (startMs != null) query = query.whereGreaterThanOrEqualTo("recordedAt", startMs.toTimestamp())
+        if (endMs != null) query = query.whereLessThanOrEqualTo("recordedAt", endMs.toTimestamp())
+        val subscription = query
             .orderBy("recordedAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
