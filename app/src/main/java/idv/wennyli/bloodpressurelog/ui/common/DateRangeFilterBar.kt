@@ -31,8 +31,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import idv.wennyli.bloodpressurelog.R
+import idv.wennyli.bloodpressurelog.ui.theme.BloodPressureLogTheme
 import idv.wennyli.bloodpressurelog.utils.DateUtils
 
 private enum class DatePickerTarget { NONE, START, END }
@@ -160,5 +162,17 @@ fun DateRangeFilterBar(
                 contentDescription = stringResource(R.string.record_list_cd_search),
             )
         }
+    }
+}
+
+@Preview(showBackground = true, name = "DateRangeFilterBar - Last 30 Days")
+@Composable
+private fun DateRangeFilterBarPreview() {
+    BloodPressureLogTheme {
+        DateRangeFilterBar(
+            startMs = DateUtils.startOfDay(daysAgo = 29),
+            endMs = DateUtils.endOfDay(daysAgo = 0),
+            onDateRangeConfirmed = { _, _ -> },
+        )
     }
 }
