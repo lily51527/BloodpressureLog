@@ -10,12 +10,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SelectableDates
@@ -43,6 +41,7 @@ private enum class DatePickerTarget { NONE, START, END }
  * 共用的日期區間篩選列，供 RecordListScreen 與 TrendsScreen 共用，確保 UI 與驗證邏輯一致。
  *
  * 開始日期不得晚於結束日期、結束日期不得早於開始日期，透過 [SelectableDates] 在選擇當下即擋掉不合法組合。
+ * 確認開始或結束日期的 DatePickerDialog 後，會立即以目前的日期區間呼叫 [onDateRangeConfirmed]，不需額外的搜尋按鈕。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,8 +72,13 @@ fun DateRangeFilterBar(
                 onDismissRequest = { showPicker = DatePickerTarget.NONE },
                 confirmButton = {
                     TextButton(onClick = {
-                        state.selectedDateMillis?.let { pendingStartUtcMs = it }
+                        val selected = state.selectedDateMillis ?: pendingStartUtcMs
+                        pendingStartUtcMs = selected
                         showPicker = DatePickerTarget.NONE
+                        onDateRangeConfirmed(
+                            DateUtils.utcMidnightToStartOfDay(selected),
+                            DateUtils.utcMidnightToEndOfDay(pendingEndUtcMs),
+                        )
                     }) { Text(stringResource(R.string.common_button_confirm)) }
                 },
                 dismissButton = {
@@ -97,8 +101,13 @@ fun DateRangeFilterBar(
                 onDismissRequest = { showPicker = DatePickerTarget.NONE },
                 confirmButton = {
                     TextButton(onClick = {
-                        state.selectedDateMillis?.let { pendingEndUtcMs = it }
+                        val selected = state.selectedDateMillis ?: pendingEndUtcMs
+                        pendingEndUtcMs = selected
                         showPicker = DatePickerTarget.NONE
+                        onDateRangeConfirmed(
+                            DateUtils.utcMidnightToStartOfDay(pendingStartUtcMs),
+                            DateUtils.utcMidnightToEndOfDay(selected),
+                        )
                     }) { Text(stringResource(R.string.common_button_confirm)) }
                 },
                 dismissButton = {
@@ -149,17 +158,6 @@ fun DateRangeFilterBar(
             Text(
                 text = DateUtils.formatDate(DateUtils.utcMidnightToStartOfDay(pendingEndUtcMs)),
                 style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-        IconButton(onClick = {
-            onDateRangeConfirmed(
-                DateUtils.utcMidnightToStartOfDay(pendingStartUtcMs),
-                DateUtils.utcMidnightToEndOfDay(pendingEndUtcMs),
-            )
-        }) {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = stringResource(R.string.record_list_cd_search),
             )
         }
     }
