@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import idv.wennyli.bloodpressurelog.R
+import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
@@ -45,6 +46,8 @@ import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import idv.wennyli.bloodpressurelog.ui.common.DateRangeFilter
 import idv.wennyli.bloodpressurelog.ui.common.DateRangeFilterBar
 import idv.wennyli.bloodpressurelog.ui.theme.BloodPressureLogTheme
@@ -206,6 +209,15 @@ private fun TrendChart(
             ),
         ),
         modelProducer = modelProducer,
+        // 固定顯示為可容納所有資料點的縮放比例，並停用手勢縮放/水平滑動，
+        // 避免超過 7 天時圖表需要互動才能看到完整區間。
+        scrollState = rememberVicoScrollState(scrollEnabled = false),
+        zoomState = rememberVicoZoomState(
+            zoomEnabled = false,
+            initialZoom = Zoom.Content,
+            minZoom = Zoom.Content,
+            maxZoom = Zoom.Content,
+        ),
         modifier = modifier,
     )
 }
