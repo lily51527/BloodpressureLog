@@ -12,6 +12,7 @@ import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
 import idv.wennyli.bloodpressurelog.domain.usecase.BuildChartDataUseCase
+import idv.wennyli.bloodpressurelog.utils.DateUtils
 import io.mockk.every
 import io.mockk.mockk
 import kotlin.test.BeforeTest
@@ -57,17 +58,33 @@ class TrendsViewModelTest {
         assertThat(viewModel.uiState.value.isLoading).isTrue()
     }
 
-    /** Loading 狀態下呼叫 [TrendsViewModel.onRangeChange]，[TrendsUiState.selectedRange] 應立即更新，且維持 loading 中。 */
+    /** 初始 dateFilter 預設應為最近 30 天（startMs 為 29 天前起點，endMs 為今天終點）。 */
     @Test
-    fun `onRangeChange while loading updates selectedRange`() {
+    fun `initial dateFilter defaults to last 30 days`() {
+        val viewModel = createViewModel()
+
+        val expectedStart = DateUtils.startOfDay(daysAgo = 29)
+        val expectedEnd = DateUtils.endOfDay(daysAgo = 0)
+        val state = viewModel.uiState.value
+
+        assertThat(state.dateFilter.startMs).isEqualTo(expectedStart)
+        assertThat(state.dateFilter.endMs).isEqualTo(expectedEnd)
+    }
+
+    /** Loading 狀態下呼叫 [TrendsViewModel.onDateRangeConfirmed]，[TrendsUiState.dateFilter] 應立即更新，且維持 loading 中。 */
+    @Test
+    fun `onDateRangeConfirmed while loading updates dateFilter`() {
         val viewModel = createViewModel()
 
         assertThat(viewModel.uiState.value.isLoading).isTrue()
 
-        viewModel.onRangeChange(TrendRange.DAYS_30)
+        val newStart = 1_000_000L
+        val newEnd = 2_000_000L
+        viewModel.onDateRangeConfirmed(newStart, newEnd)
 
         val state = viewModel.uiState.value
-        assertThat(state.selectedRange).isEqualTo(TrendRange.DAYS_30)
+        assertThat(state.dateFilter.startMs).isEqualTo(newStart)
+        assertThat(state.dateFilter.endMs).isEqualTo(newEnd)
         assertThat(state.isLoading).isTrue()
     }
 
@@ -76,11 +93,7 @@ class TrendsViewModelTest {
     fun `success with no chart points sets isEmpty true`() {
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(emptyList()))
         every {
-            mockBuildChartDataUseCase(
-                any(),
-                any(),
-                any()
-            )
+            mockBuildChartDataUseCase(any(), any(), any(), any())
         } returns (emptyList<Pair<Float, Float>>() to emptyList())
 
         val viewModel = createViewModel()
@@ -104,18 +117,21 @@ class TrendsViewModelTest {
         assertThat(state.errorMessage).isEqualTo("載入失敗")
     }
 
-    /** [DataState.Error] 狀態下呼叫 [TrendsViewModel.onRangeChange]，errorMessage 應保留，且 selectedRange 應正確更新。 */
+    /** [DataState.Error] 狀態下呼叫 [TrendsViewModel.onDateRangeConfirmed]，errorMessage 應保留，且 dateFilter 應正確更新。 */
     @Test
-    fun `error state preserves errorMessage when selectedRange changes`() {
+    fun `error state preserves errorMessage when dateFilter changes`() {
         every { mockRepository.observeRecords() } returns
                 flowOf(DataState.Error(RuntimeException("error"), "載入失敗"))
 
         val viewModel = createViewModel()
-        viewModel.onRangeChange(TrendRange.DAYS_14)
+        val newStart = 1_000_000L
+        val newEnd = 2_000_000L
+        viewModel.onDateRangeConfirmed(newStart, newEnd)
 
         val state = viewModel.uiState.value
         assertThat(state.errorMessage).isEqualTo("載入失敗")
-        assertThat(state.selectedRange).isEqualTo(TrendRange.DAYS_14)
+        assertThat(state.dateFilter.startMs).isEqualTo(newStart)
+        assertThat(state.dateFilter.endMs).isEqualTo(newEnd)
         assertThat(state.isLoading).isFalse()
     }
 
@@ -133,7 +149,7 @@ class TrendsViewModelTest {
         val fakePoints = listOf(5f to 120f, 6f to 130f)
         val fakeLabels = listOf("1/1", "1/2")
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(records))
-        every { mockBuildChartDataUseCase(any(), any(), any()) } returns (fakePoints to fakeLabels)
+        every { mockBuildChartDataUseCase(any(), any(), any(), any()) } returns (fakePoints to fakeLabels)
 
         val viewModel = createViewModel()
 
@@ -144,25 +160,26 @@ class TrendsViewModelTest {
     }
 
     /**
-     * 呼叫 [TrendsViewModel.onRangeChange] 後：
-     * - [TrendsUiState.selectedRange] 應更新為新範圍
-     * - UseCase 應以新的 range 重新呼叫，[TrendsUiState.xLabels] 數量應對應新範圍天數
+     * 呼叫 [TrendsViewModel.onDateRangeConfirmed] 後：
+     * - [TrendsUiState.dateFilter] 應更新為新的日期區間
+     * - UseCase 應以新的 startMs/endMs 重新呼叫
      */
     @Test
-    fun `onRangeChange updates selectedRange and calls use case with new range`() {
+    fun `onDateRangeConfirmed updates dateFilter and calls use case with new range`() {
         val today = LocalDate.now()
         val records = listOf(record(120, 80, 70, today))
+        val start14 = epochMillis(today.minusDays(13))
+        val end = epochMillis(today)
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(records))
-        every { mockBuildChartDataUseCase(any(), TrendRange.DAYS_7, any()) } returns
-                (listOf(6f to 120f) to List(7) { "" })
-        every { mockBuildChartDataUseCase(any(), TrendRange.DAYS_14, any()) } returns
+        every { mockBuildChartDataUseCase(any(), any(), any(), any()) } returns
                 (listOf(6f to 120f) to List(14) { "" })
 
         val viewModel = createViewModel()
-        viewModel.onRangeChange(TrendRange.DAYS_14)
+        viewModel.onDateRangeConfirmed(start14, end)
 
         val state = viewModel.uiState.value
-        assertThat(state.selectedRange).isEqualTo(TrendRange.DAYS_14)
+        assertThat(state.dateFilter.startMs).isEqualTo(start14)
+        assertThat(state.dateFilter.endMs).isEqualTo(end)
         assertThat(state.xLabels).hasSize(14)
     }
 
@@ -175,11 +192,7 @@ class TrendsViewModelTest {
         val recordsFlow = MutableStateFlow<DataState<List<BloodPressureRecord>>>(DataState.Loading)
         every { mockRepository.observeRecords() } returns recordsFlow
         every {
-            mockBuildChartDataUseCase(
-                any(),
-                any(),
-                any()
-            )
+            mockBuildChartDataUseCase(any(), any(), any(), any())
         } returns (listOf(0f to 120f) to emptyList())
 
         val viewModel = createViewModel()
@@ -203,9 +216,9 @@ class TrendsViewModelTest {
         val today = LocalDate.now()
         val records = listOf(record(120, 80, 70, today))
         every { mockRepository.observeRecords() } returns flowOf(DataState.Success(records))
-        every { mockBuildChartDataUseCase(any(), any(), TrendMetric.SYSTOLIC) } returns
+        every { mockBuildChartDataUseCase(any(), any(), any(), TrendMetric.SYSTOLIC) } returns
                 (listOf(6f to 120f) to emptyList())
-        every { mockBuildChartDataUseCase(any(), any(), TrendMetric.DIASTOLIC) } returns
+        every { mockBuildChartDataUseCase(any(), any(), any(), TrendMetric.DIASTOLIC) } returns
                 (listOf(6f to 80f) to emptyList())
 
         val viewModel = createViewModel()

@@ -8,6 +8,7 @@ import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.AuthRepository
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
+import idv.wennyli.bloodpressurelog.ui.common.DateRangeFilter
 import idv.wennyli.bloodpressurelog.utils.ResourceProvider
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -27,7 +28,7 @@ data class RecordListUiState(
     val records: List<BloodPressureRecord> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
-    val filter: RecordFilter = RecordFilter.default(),
+    val filter: DateRangeFilter = DateRangeFilter.default(),
 )
 
 @HiltViewModel
@@ -40,7 +41,7 @@ class RecordListViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(RecordListUiState())
     val uiState: StateFlow<RecordListUiState> = _uiState.asStateFlow()
 
-    private val _filter = MutableStateFlow(RecordFilter.default())
+    private val _filter = MutableStateFlow(DateRangeFilter.default())
 
     private val _navigateToEdit = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val navigateToEdit: SharedFlow<String> = _navigateToEdit.asSharedFlow()
@@ -73,7 +74,7 @@ class RecordListViewModel @Inject constructor(
     }
 
     fun onDateRangeConfirmed(startMs: Long, endMs: Long) {
-        _filter.value = RecordFilter(startMs = startMs, endMs = endMs)
+        _filter.value = DateRangeFilter(startMs = startMs, endMs = endMs)
     }
 
     fun onEditRecord(id: String) {

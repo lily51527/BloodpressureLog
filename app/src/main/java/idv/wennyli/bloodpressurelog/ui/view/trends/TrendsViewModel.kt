@@ -7,6 +7,7 @@ import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
 import idv.wennyli.bloodpressurelog.data.model.DataState
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
 import idv.wennyli.bloodpressurelog.domain.usecase.BuildChartDataUseCase
+import idv.wennyli.bloodpressurelog.ui.common.DateRangeFilter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,7 +19,7 @@ import javax.inject.Inject
 data class TrendsUiState(
     val chartPoints: List<Pair<Float, Float>> = emptyList(),
     val xLabels: List<String> = emptyList(),
-    val selectedRange: TrendRange = TrendRange.DAYS_7,
+    val dateFilter: DateRangeFilter = DateRangeFilter.default(),
     val selectedMetric: TrendMetric = TrendMetric.SYSTOLIC,
     val isLoading: Boolean = true,
     val isEmpty: Boolean = false,
@@ -33,34 +34,39 @@ class TrendsViewModel @Inject constructor(
 
     private val _recordsState =
         MutableStateFlow<DataState<List<BloodPressureRecord>>>(DataState.Loading)
-    private val _selectedRange = MutableStateFlow(TrendRange.DAYS_7)
+    private val _dateFilter = MutableStateFlow(DateRangeFilter.default())
     private val _selectedMetric = MutableStateFlow(TrendMetric.SYSTOLIC)
 
     val uiState: StateFlow<TrendsUiState> = combine(
         _recordsState,
-        _selectedRange,
+        _dateFilter,
         _selectedMetric,
-    ) { state, range, metric ->
+    ) { state, dateFilter, metric ->
         when (state) {
             is DataState.Loading -> TrendsUiState(
                 isLoading = true,
-                selectedRange = range,
+                dateFilter = dateFilter,
                 selectedMetric = metric
             )
 
             is DataState.Error -> TrendsUiState(
                 isLoading = false,
-                selectedRange = range,
+                dateFilter = dateFilter,
                 selectedMetric = metric,
                 errorMessage = state.message
             )
 
             is DataState.Success -> {
-                val (points, labels) = buildChartDataUseCase(state.data, range, metric)
+                val (points, labels) = buildChartDataUseCase(
+                    state.data,
+                    dateFilter.startMs,
+                    dateFilter.endMs,
+                    metric,
+                )
                 TrendsUiState(
                     chartPoints = points,
                     xLabels = labels,
-                    selectedRange = range,
+                    dateFilter = dateFilter,
                     selectedMetric = metric,
                     isLoading = false,
                     isEmpty = points.isEmpty(),
@@ -79,8 +85,8 @@ class TrendsViewModel @Inject constructor(
         }
     }
 
-    fun onRangeChange(range: TrendRange) {
-        _selectedRange.value = range
+    fun onDateRangeConfirmed(startMs: Long, endMs: Long) {
+        _dateFilter.value = DateRangeFilter(startMs = startMs, endMs = endMs)
     }
 
     fun onMetricChange(metric: TrendMetric) {

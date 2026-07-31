@@ -45,6 +45,8 @@ import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import idv.wennyli.bloodpressurelog.ui.common.DateRangeFilter
+import idv.wennyli.bloodpressurelog.ui.common.DateRangeFilterBar
 import idv.wennyli.bloodpressurelog.ui.theme.BloodPressureLogTheme
 
 @Composable
@@ -54,7 +56,7 @@ fun TrendsScreen(
     val uiState by viewModel.uiState.collectAsState()
     TrendsContent(
         uiState = uiState,
-        onRangeChange = viewModel::onRangeChange,
+        onDateRangeConfirmed = viewModel::onDateRangeConfirmed,
         onMetricChange = viewModel::onMetricChange,
     )
 }
@@ -63,7 +65,7 @@ fun TrendsScreen(
 @Composable
 internal fun TrendsContent(
     uiState: TrendsUiState,
-    onRangeChange: (TrendRange) -> Unit,
+    onDateRangeConfirmed: (startMs: Long, endMs: Long) -> Unit,
     onMetricChange: (TrendMetric) -> Unit,
 ) {
     Scaffold(
@@ -79,18 +81,11 @@ internal fun TrendsContent(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            FlowRow(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                TrendRange.entries.forEach { range ->
-                    FilterChip(
-                        selected = uiState.selectedRange == range,
-                        onClick = { onRangeChange(range) },
-                        label = { Text(range.displayLabel()) },
-                    )
-                }
-            }
+            DateRangeFilterBar(
+                startMs = uiState.dateFilter.startMs,
+                endMs = uiState.dateFilter.endMs,
+                onDateRangeConfirmed = onDateRangeConfirmed,
+            )
 
             FlowRow(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -265,10 +260,10 @@ private fun TrendsWithDataPreview() {
                 isEmpty = false,
                 chartPoints = listOf(0f to 125f, 1f to 130f, 3f to 118f, 5f to 135f, 6f to 122f),
                 xLabels = listOf("4/27", "4/28", "4/29", "4/30", "5/1", "5/2", "5/3"),
-                selectedRange = TrendRange.DAYS_7,
+                dateFilter = DateRangeFilter.default(),
                 selectedMetric = TrendMetric.SYSTOLIC,
             ),
-            onRangeChange = {},
+            onDateRangeConfirmed = { _, _ -> },
             onMetricChange = {},
         )
     }
@@ -280,7 +275,7 @@ private fun TrendsEmptyPreview() {
     BloodPressureLogTheme {
         TrendsContent(
             uiState = TrendsUiState(isLoading = false, isEmpty = true),
-            onRangeChange = {},
+            onDateRangeConfirmed = { _, _ -> },
             onMetricChange = {},
         )
     }
@@ -292,7 +287,7 @@ private fun TrendsLoadingPreview() {
     BloodPressureLogTheme {
         TrendsContent(
             uiState = TrendsUiState(isLoading = true),
-            onRangeChange = {},
+            onDateRangeConfirmed = { _, _ -> },
             onMetricChange = {},
         )
     }
@@ -304,14 +299,11 @@ private fun TrendsErrorPreview() {
     BloodPressureLogTheme {
         TrendsContent(
             uiState = TrendsUiState(isLoading = false, errorMessage = "載入失敗"),
-            onRangeChange = {},
+            onDateRangeConfirmed = { _, _ -> },
             onMetricChange = {},
         )
     }
 }
-
-@Composable
-private fun TrendRange.displayLabel(): String = stringResource(this.labelRes)
 
 @Composable
 private fun TrendMetric.displayLabel(): String = stringResource(this.labelRes)
