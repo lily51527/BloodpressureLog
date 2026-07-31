@@ -52,6 +52,7 @@ import idv.wennyli.bloodpressurelog.data.model.TimeSlot
 import idv.wennyli.bloodpressurelog.data.model.bloodPressureLevel
 import idv.wennyli.bloodpressurelog.data.model.timeSlot
 import idv.wennyli.bloodpressurelog.ui.common.DateRangeFilterBar
+import idv.wennyli.bloodpressurelog.ui.common.color
 import idv.wennyli.bloodpressurelog.ui.theme.BloodPressureLogTheme
 import idv.wennyli.bloodpressurelog.utils.DateUtils
 
@@ -247,13 +248,6 @@ private fun RecordCard(
             }
         }
     }
-}
-
-private fun BloodPressureLevel.color(): Color = when (this) {
-    BloodPressureLevel.NORMAL -> Color(0xFF4CAF50)
-    BloodPressureLevel.ELEVATED -> Color(0xFFFFEB3B)
-    BloodPressureLevel.HIGH_STAGE_1 -> Color(0xFFFF9800)
-    BloodPressureLevel.HIGH_STAGE_2 -> Color(0xFFF44336)
 }
 
 @Composable
