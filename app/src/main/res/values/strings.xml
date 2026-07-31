@@ -74,9 +74,6 @@
     <string name="trends_screen_title">趨勢</string>
     <string name="trends_empty">此區間無紀錄</string>
     <string name="trends_systolic_legend_title">收縮壓警戒標準（WHO）</string>
-    <string name="trends_range_7_days">7天</string>
-    <string name="trends_range_14_days">14天</string>
-    <string name="trends_range_30_days">30天</string>
     <string name="trends_metric_systolic">收縮壓</string>
     <string name="trends_metric_diastolic">舒張壓</string>
     <string name="trends_metric_pulse">脈搏</string>
