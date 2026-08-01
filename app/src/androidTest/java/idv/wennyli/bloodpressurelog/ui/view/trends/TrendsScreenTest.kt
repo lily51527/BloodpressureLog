@@ -3,7 +3,10 @@ package idv.wennyli.bloodpressurelog.ui.view.trends
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import idv.wennyli.bloodpressurelog.ui.common.DateRangeFilter
+import idv.wennyli.bloodpressurelog.utils.DateUtils
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -122,5 +125,91 @@ class TrendsScreenTest {
 
         composeTestRule.onNodeWithText("收縮壓警戒標準（WHO）").assertDoesNotExist()
         composeTestRule.onNodeWithText("舒張壓警戒標準（WHO）").assertDoesNotExist()
+    }
+
+    @Test
+    fun metricChips_renderWithCorrectLabels() {
+        composeTestRule.setContent {
+            TrendsContent(
+                uiState = TrendsUiState(isLoading = true),
+                onDateRangeConfirmed = { _, _ -> },
+                onMetricChange = {},
+            )
+        }
+
+        composeTestRule.onNodeWithText("收縮壓").assertIsDisplayed()
+        composeTestRule.onNodeWithText("舒張壓").assertIsDisplayed()
+        composeTestRule.onNodeWithText("脈搏").assertIsDisplayed()
+    }
+
+    @Test
+    fun clickingSystolicChip_invokesOnMetricChangeWithSystolic() {
+        var changedMetric: TrendMetric? = null
+
+        composeTestRule.setContent {
+            TrendsContent(
+                uiState = TrendsUiState(isLoading = true, selectedMetric = TrendMetric.DIASTOLIC),
+                onDateRangeConfirmed = { _, _ -> },
+                onMetricChange = { changedMetric = it },
+            )
+        }
+
+        composeTestRule.onNodeWithText("收縮壓").performClick()
+
+        assert(changedMetric == TrendMetric.SYSTOLIC)
+    }
+
+    @Test
+    fun clickingDiastolicChip_invokesOnMetricChangeWithDiastolic() {
+        var changedMetric: TrendMetric? = null
+
+        composeTestRule.setContent {
+            TrendsContent(
+                uiState = TrendsUiState(isLoading = true, selectedMetric = TrendMetric.SYSTOLIC),
+                onDateRangeConfirmed = { _, _ -> },
+                onMetricChange = { changedMetric = it },
+            )
+        }
+
+        composeTestRule.onNodeWithText("舒張壓").performClick()
+
+        assert(changedMetric == TrendMetric.DIASTOLIC)
+    }
+
+    @Test
+    fun clickingPulseChip_invokesOnMetricChangeWithPulse() {
+        var changedMetric: TrendMetric? = null
+
+        composeTestRule.setContent {
+            TrendsContent(
+                uiState = TrendsUiState(isLoading = true, selectedMetric = TrendMetric.SYSTOLIC),
+                onDateRangeConfirmed = { _, _ -> },
+                onMetricChange = { changedMetric = it },
+            )
+        }
+
+        composeTestRule.onNodeWithText("脈搏").performClick()
+
+        assert(changedMetric == TrendMetric.PULSE)
+    }
+
+    @Test
+    fun dateRangeButtons_showFormattedDatesFromUiState() {
+        val startMs = 1_700_000_000_000L
+        val endMs = 1_700_500_000_000L
+
+        composeTestRule.setContent {
+            TrendsContent(
+                uiState = TrendsUiState(
+                    isLoading = true,
+                    dateFilter = DateRangeFilter(startMs = startMs, endMs = endMs),
+                ),
+                onDateRangeConfirmed = { _, _ -> },
+                onMetricChange = {},
+            )
+        }
+
+        composeTestRule.onNodeWithText(DateUtils.formatDate(startMs)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(DateUtils.formatDate(endMs)).assertIsDisplayed()
     }
 }
