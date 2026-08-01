@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import idv.wennyli.bloodpressurelog.data.model.BloodPressureRecord
+import idv.wennyli.bloodpressurelog.ui.common.DateRangeFilter
 import idv.wennyli.bloodpressurelog.utils.DateUtils
 import org.junit.Rule
 import org.junit.Test
@@ -193,5 +194,63 @@ class RecordListScreenTest {
         composeTestRule.onNodeWithContentDescription("刪除").performClick()
 
         assert(deleteRequestedId == "rec-42")
+    }
+
+    @Test
+    fun deleteConfirmationDialog_showsTitleAndMessage() {
+        composeTestRule.setContent {
+            DeleteConfirmationDialog(onConfirmDelete = {}, onDismiss = {})
+        }
+
+        composeTestRule.onNodeWithText("刪除紀錄").assertIsDisplayed()
+        composeTestRule.onNodeWithText("確定要刪除這筆紀錄嗎？此操作無法復原。").assertIsDisplayed()
+    }
+
+    @Test
+    fun deleteConfirmationDialog_confirmClick_invokesOnConfirmDelete() {
+        var confirmed = false
+
+        composeTestRule.setContent {
+            DeleteConfirmationDialog(onConfirmDelete = { confirmed = true }, onDismiss = {})
+        }
+
+        composeTestRule.onNodeWithText("刪除").performClick()
+
+        assert(confirmed)
+    }
+
+    @Test
+    fun deleteConfirmationDialog_cancelClick_invokesOnDismiss() {
+        var dismissed = false
+
+        composeTestRule.setContent {
+            DeleteConfirmationDialog(onConfirmDelete = {}, onDismiss = { dismissed = true })
+        }
+
+        composeTestRule.onNodeWithText("取消").performClick()
+
+        assert(dismissed)
+    }
+
+    @Test
+    fun dateRangeButtons_showFormattedDatesFromUiState() {
+        val startMs = 1_700_000_000_000L
+        val endMs = 1_700_500_000_000L
+
+        composeTestRule.setContent {
+            RecordListContent(
+                uiState = RecordListUiState(
+                    isLoading = false,
+                    records = emptyList(),
+                    filter = DateRangeFilter(startMs = startMs, endMs = endMs),
+                ),
+                onSignOut = {},
+                onEditRecord = {},
+                onDeleteRecord = {},
+            )
+        }
+
+        composeTestRule.onNodeWithText(DateUtils.formatDate(startMs)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(DateUtils.formatDate(endMs)).assertIsDisplayed()
     }
 }
