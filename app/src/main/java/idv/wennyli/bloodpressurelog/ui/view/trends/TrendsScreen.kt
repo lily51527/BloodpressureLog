@@ -158,9 +158,29 @@ internal fun TrendsContent(
                 }
             }
 
-            if (uiState.selectedMetric == TrendMetric.SYSTOLIC && !uiState.isEmpty && !uiState.isLoading) {
-                Spacer(modifier = Modifier.height(16.dp))
-                SystolicThresholdLegend(modifier = Modifier.padding(horizontal = 16.dp))
+            if (!uiState.isEmpty && !uiState.isLoading) {
+                val legendData = when (uiState.selectedMetric) {
+                    TrendMetric.SYSTOLIC -> stringResource(R.string.trends_systolic_legend_title) to listOf(
+                        Triple("< 120", stringResource(R.string.trends_bp_level_normal), BloodPressureLevel.NORMAL.color()),
+                        Triple("120–129", stringResource(R.string.trends_bp_level_elevated), BloodPressureLevel.ELEVATED.color()),
+                        Triple("130–139", stringResource(R.string.trends_bp_level_high_stage_1), BloodPressureLevel.HIGH_STAGE_1.color()),
+                        Triple("≥ 140", stringResource(R.string.trends_bp_level_high_stage_2), BloodPressureLevel.HIGH_STAGE_2.color()),
+                    )
+                    TrendMetric.DIASTOLIC -> stringResource(R.string.trends_diastolic_legend_title) to listOf(
+                        Triple("< 80", stringResource(R.string.trends_bp_level_normal), BloodPressureLevel.NORMAL.color()),
+                        Triple("80–89", stringResource(R.string.trends_bp_level_high_stage_1), BloodPressureLevel.HIGH_STAGE_1.color()),
+                        Triple("≥ 90", stringResource(R.string.trends_bp_level_high_stage_2), BloodPressureLevel.HIGH_STAGE_2.color()),
+                    )
+                    TrendMetric.PULSE -> null
+                }
+                if (legendData != null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    ThresholdLegend(
+                        title = legendData.first,
+                        items = legendData.second,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -266,20 +286,19 @@ private fun rememberThresholdLine(y: Double, level: BloodPressureLevel): Horizon
 }
 
 @Composable
-private fun SystolicThresholdLegend(modifier: Modifier = Modifier) {
+private fun ThresholdLegend(
+    title: String,
+    items: List<Triple<String, String, Color>>,
+    modifier: Modifier = Modifier,
+) {
     Column(modifier = modifier) {
         Text(
-            text = stringResource(R.string.trends_systolic_legend_title),
+            text = title,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.height(4.dp))
-        listOf(
-            Triple("< 120", stringResource(R.string.trends_bp_level_normal), Color(0xFF4CAF50)),
-            Triple("120–129", stringResource(R.string.trends_bp_level_elevated), Color(0xFFFFEB3B)),
-            Triple("130–139", stringResource(R.string.trends_bp_level_high_stage_1), Color(0xFFFF9800)),
-            Triple("≥ 140", stringResource(R.string.trends_bp_level_high_stage_2), Color(0xFFF44336)),
-        ).forEach { (range, label, color) ->
+        items.forEach { (range, label, color) ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(vertical = 2.dp),
@@ -317,6 +336,25 @@ private fun TrendsWithDataPreview() {
                 xLabels = listOf("4/27", "4/28", "4/29", "4/30", "5/1", "5/2", "5/3"),
                 dateFilter = DateRangeFilter.default(),
                 selectedMetric = TrendMetric.SYSTOLIC,
+            ),
+            onDateRangeConfirmed = { _, _ -> },
+            onMetricChange = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Trends - Diastolic")
+@Composable
+private fun TrendsDiastolicPreview() {
+    BloodPressureLogTheme {
+        TrendsContent(
+            uiState = TrendsUiState(
+                isLoading = false,
+                isEmpty = false,
+                chartPoints = listOf(0f to 78f, 1f to 85f, 3f to 70f, 5f to 92f, 6f to 80f),
+                xLabels = listOf("4/27", "4/28", "4/29", "4/30", "5/1", "5/2", "5/3"),
+                dateFilter = DateRangeFilter.default(),
+                selectedMetric = TrendMetric.DIASTOLIC,
             ),
             onDateRangeConfirmed = { _, _ -> },
             onMetricChange = {},
