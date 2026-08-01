@@ -27,7 +27,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,12 +46,17 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
+import com.patrykandpatrick.vico.compose.common.Fill
+import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
+import idv.wennyli.bloodpressurelog.data.model.BloodPressureLevel
 import idv.wennyli.bloodpressurelog.ui.common.DateRangeFilter
 import idv.wennyli.bloodpressurelog.ui.common.DateRangeFilterBar
+import idv.wennyli.bloodpressurelog.ui.common.color
 import idv.wennyli.bloodpressurelog.ui.theme.BloodPressureLogTheme
 
 @Composable
@@ -142,6 +149,7 @@ internal fun TrendsContent(
                     TrendChart(
                         chartPoints = uiState.chartPoints,
                         xLabels = uiState.xLabels,
+                        metric = uiState.selectedMetric,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(250.dp)
@@ -171,15 +179,21 @@ internal fun TrendsContent(
 private fun TrendChart(
     chartPoints: List<Pair<Float, Float>>,
     xLabels: List<String>,
+    metric: TrendMetric,
     modifier: Modifier = Modifier,
 ) {
     // Vico 的資料橋接器，負責將資料傳遞給圖表層。
     // 使用 remember 確保在 recomposition 之間保持同一個實例，避免重複建立。
     val modelProducer = remember { CartesianChartModelProducer() }
 
+    // 參考線實際套用的 metric，只有在圖表資料真正套用完成後才會更新。
+    // 避免 metric 切換的瞬間，參考線先變了但圖表資料（與 y 軸範圍）還沒跟上，
+    // 導致線條短暫顯示在錯誤位置（例如切到收縮壓時，線在舊的 y 軸範圍外閃現）。
+    var appliedMetric by remember { mutableStateOf(metric) }
+
     // 當 chartPoints 變更時（切換時間範圍或指標），以 transaction 方式更新圖表資料。
     // runTransaction 為非同步操作，Vico 會在資料準備就緒後自動觸發重繪。
-    LaunchedEffect(chartPoints) {
+    LaunchedEffect(chartPoints, metric) {
         modelProducer.runTransaction {
             lineSeries {
                 series(
@@ -188,6 +202,7 @@ private fun TrendChart(
                 )
             }
         }
+        appliedMetric = metric
     }
 
     // 將 Vico 傳入的 x 軸數值（dayIndex）對應回 xLabels 中的日期字串。
@@ -207,8 +222,25 @@ private fun TrendChart(
             bottomAxis = HorizontalAxis.rememberBottom(  // 底部 x 軸，套用日期標籤
                 valueFormatter = valueFormatter,
             ),
+            // 依目前選擇的指標，畫出對應顏色的血壓警戒參考線（與下方圖例顏色一致）。
+            // 使用 appliedMetric 而非 metric，確保與圖表資料同步更新。
+            decorations = when (appliedMetric) {
+                TrendMetric.SYSTOLIC -> listOf(
+                    rememberThresholdLine(120.0, BloodPressureLevel.ELEVATED),
+                    rememberThresholdLine(140.0, BloodPressureLevel.HIGH_STAGE_2),
+                )
+                TrendMetric.DIASTOLIC -> listOf(
+                    rememberThresholdLine(80.0, BloodPressureLevel.HIGH_STAGE_1),
+                    rememberThresholdLine(90.0, BloodPressureLevel.HIGH_STAGE_2),
+                )
+                TrendMetric.PULSE -> emptyList()
+            },
         ),
         modelProducer = modelProducer,
+        // 停用 Vico 預設的資料變化過渡動畫。切換 metric 時，資料範圍差異可能很大
+        // （例如舒張壓 60-100 換成收縮壓 110-140+），若套用過渡動畫，固定 y 值的
+        // 參考線會在動畫過程中短暫落在動畫尚未展開完成的區域，造成閃現。
+        animationSpec = null,
         // 固定顯示為可容納所有資料點的縮放比例，並停用手勢縮放/水平滑動，
         // 避免超過 7 天時圖表需要互動才能看到完整區間。
         scrollState = rememberVicoScrollState(scrollEnabled = false),
@@ -220,6 +252,17 @@ private fun TrendChart(
         ),
         modifier = modifier,
     )
+}
+
+@Composable
+private fun rememberThresholdLine(y: Double, level: BloodPressureLevel): HorizontalLine {
+    val lineComponent = rememberLineComponent(
+        fill = Fill(level.color()),
+        thickness = 1.dp,
+    )
+    return remember(lineComponent) {
+        HorizontalLine(y = { y }, line = lineComponent)
+    }
 }
 
 @Composable
