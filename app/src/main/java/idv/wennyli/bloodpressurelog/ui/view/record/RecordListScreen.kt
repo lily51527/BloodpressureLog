@@ -72,23 +72,12 @@ fun RecordListScreen(
     var recordIdToDelete by remember { mutableStateOf<String?>(null) }
 
     if (recordIdToDelete != null) {
-        AlertDialog(
-            onDismissRequest = { recordIdToDelete = null },
-            title = { Text(stringResource(R.string.record_list_dialog_delete_title)) },
-            text = { Text(stringResource(R.string.record_list_dialog_delete_message)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteRecord(id = recordIdToDelete!!)
-                        recordIdToDelete = null
-                    },
-                ) {
-                    Text(stringResource(R.string.record_list_button_delete), color = MaterialTheme.colorScheme.error)
-                }
+        DeleteConfirmationDialog(
+            onConfirmDelete = {
+                viewModel.deleteRecord(id = recordIdToDelete!!)
+                recordIdToDelete = null
             },
-            dismissButton = {
-                TextButton(onClick = { recordIdToDelete = null }) { Text(stringResource(R.string.common_button_cancel)) }
-            },
+            onDismiss = { recordIdToDelete = null },
         )
     }
 
@@ -98,6 +87,26 @@ fun RecordListScreen(
         onEditRecord = viewModel::onEditRecord,
         onDeleteRecord = { recordIdToDelete = it },
         onDateRangeConfirmed = viewModel::onDateRangeConfirmed,
+    )
+}
+
+@Composable
+internal fun DeleteConfirmationDialog(
+    onConfirmDelete: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.record_list_dialog_delete_title)) },
+        text = { Text(stringResource(R.string.record_list_dialog_delete_message)) },
+        confirmButton = {
+            TextButton(onClick = onConfirmDelete) {
+                Text(stringResource(R.string.record_list_button_delete), color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_button_cancel)) }
+        },
     )
 }
 
