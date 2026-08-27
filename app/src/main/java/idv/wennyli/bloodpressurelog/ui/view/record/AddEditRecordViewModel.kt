@@ -49,8 +49,6 @@ class AddEditRecordViewModel @Inject constructor(
 
     /**
      * 儲存成功事件，供 Screen 決定後續行為（連續新增模式下 resetForm，否則導航返回上一頁）。
-     * 不再與 Snackbar 顯示綁定——儲存成功的提示訊息改由 [snackbarController] 統一發送，
-     * 由 App 殼層監聽顯示，生命週期不受此畫面是否離開 Composition 影響。
      */
     private val _savedSuccessfully = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val savedSuccessfully: SharedFlow<Unit> = _savedSuccessfully.asSharedFlow()
