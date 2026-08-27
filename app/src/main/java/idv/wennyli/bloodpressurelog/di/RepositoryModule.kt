@@ -10,6 +10,8 @@ import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepositoryImpl
 import idv.wennyli.bloodpressurelog.utils.ResourceProvider
 import idv.wennyli.bloodpressurelog.utils.ResourceProviderImpl
+import idv.wennyli.bloodpressurelog.utils.SnackbarController
+import idv.wennyli.bloodpressurelog.utils.SnackbarControllerImpl
 import javax.inject.Singleton
 
 @Module
@@ -27,4 +29,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun provideBloodPressureRepository(impl: BloodPressureRepositoryImpl): BloodPressureRepository
+
+    @Binds
+    @Singleton
+    abstract fun provideSnackbarController(impl: SnackbarControllerImpl): SnackbarController
 }

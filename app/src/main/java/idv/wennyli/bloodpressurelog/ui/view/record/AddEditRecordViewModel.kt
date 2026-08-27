@@ -9,6 +9,7 @@ import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
 import idv.wennyli.bloodpressurelog.domain.usecase.SaveBloodPressureRecordUseCase
 import idv.wennyli.bloodpressurelog.domain.usecase.SaveRecordResult
 import idv.wennyli.bloodpressurelog.utils.ResourceProvider
+import idv.wennyli.bloodpressurelog.utils.SnackbarController
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -37,6 +38,7 @@ class AddEditRecordViewModel @Inject constructor(
     private val repository: BloodPressureRepository,
     private val saveRecordUseCase: SaveBloodPressureRecordUseCase,
     private val resourceProvider: ResourceProvider,
+    private val snackbarController: SnackbarController,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -45,6 +47,9 @@ class AddEditRecordViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(AddEditRecordUiState(isEditMode = recordId != null))
     val uiState: StateFlow<AddEditRecordUiState> = _uiState.asStateFlow()
 
+    /**
+     * 儲存成功事件，供 Screen 決定後續行為（連續新增模式下 resetForm，否則導航返回上一頁）。
+     */
     private val _savedSuccessfully = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val savedSuccessfully: SharedFlow<Unit> = _savedSuccessfully.asSharedFlow()
 
@@ -165,6 +170,7 @@ class AddEditRecordViewModel @Inject constructor(
             )) {
                 is SaveRecordResult.Success -> {
                     _uiState.update { it.copy(isLoading = false) }
+                    snackbarController.sendMessage(resourceProvider.getString(R.string.add_edit_record_message_save_success))
                     _savedSuccessfully.emit(Unit)
                 }
                 is SaveRecordResult.Error -> {

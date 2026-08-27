@@ -27,9 +27,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -77,12 +74,9 @@ fun AddEditRecordScreen(
     viewModel: AddEditRecordViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-    val saveSuccessMessage = stringResource(R.string.add_edit_record_message_save_success)
 
     LaunchedEffect(Unit) {
         viewModel.savedSuccessfully.collect {
-            snackbarHostState.showSnackbar(saveSuccessMessage)
             if (stayOnScreen) {
                 viewModel.resetForm()
             } else {
@@ -93,7 +87,6 @@ fun AddEditRecordScreen(
 
     AddEditRecordContent(
         uiState = uiState,
-        snackbarHostState = snackbarHostState,
         onNavigateBack = onNavigateBack,
         showNavigateBack = !stayOnScreen,
         onSystolicChange = viewModel::onSystolicChange,
@@ -114,7 +107,6 @@ fun AddEditRecordScreen(
  * @param uiState 當前 UI 狀態
  * @param onNavigateBack 返回上一頁的回呼
  * @param showNavigateBack 是否顯示 TopAppBar 的返回按鈕；預設 `true`
- * @param snackbarHostState 用於顯示儲存成功 Snackbar 的狀態物件
  * @param onSystolicChange 收縮壓輸入變更回呼
  * @param onDiastolicChange 舒張壓輸入變更回呼
  * @param onPulseChange 脈搏輸入變更回呼
@@ -128,7 +120,6 @@ internal fun AddEditRecordContent(
     uiState: AddEditRecordUiState,
     onNavigateBack: () -> Unit,
     showNavigateBack: Boolean = true,
-    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onSystolicChange: (String) -> Unit,
     onDiastolicChange: (String) -> Unit,
     onPulseChange: (String) -> Unit,
@@ -163,7 +154,6 @@ internal fun AddEditRecordContent(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) { Snackbar(it) } },
         topBar = {
             TopAppBar(
                 title = {

@@ -10,8 +10,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import idv.wennyli.bloodpressurelog.R
@@ -50,6 +53,7 @@ fun AppNavigation(startLoggedIn: Boolean) {
     val navController = rememberNavController()
     val startDestination = if (startLoggedIn) ROUTE_ADD_RECORD else ROUTE_LOGIN
     val mainViewModel: MainViewModel = hiltViewModel()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -64,7 +68,14 @@ fun AppNavigation(startLoggedIn: Boolean) {
         }
     }
 
+    LaunchedEffect(Unit) {
+        mainViewModel.snackbarMessages.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (currentRoute in BOTTOM_NAV_ROUTES) {
                 NavigationBar {
