@@ -16,9 +16,12 @@ import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
 import idv.wennyli.bloodpressurelog.domain.usecase.SaveBloodPressureRecordUseCase
 import idv.wennyli.bloodpressurelog.domain.usecase.SaveRecordResult
 import idv.wennyli.bloodpressurelog.utils.ResourceProvider
+import idv.wennyli.bloodpressurelog.utils.SnackbarController
+import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -33,17 +36,21 @@ class AddEditRecordViewModelTest {
     private val mockRepository = mockk<BloodPressureRepository>()
     private val mockSaveRecordUseCase = mockk<SaveBloodPressureRecordUseCase>()
     private val mockResourceProvider = mockk<ResourceProvider>()
+    private val mockSnackbarController = mockk<SnackbarController>()
 
     @BeforeTest
     fun setUp() {
         every { mockResourceProvider.getString(R.string.add_edit_record_error_invalid_input) } returns "請輸入有效的正整數數值"
         every { mockResourceProvider.getString(R.string.add_edit_record_error_not_found) } returns "找不到紀錄"
+        every { mockResourceProvider.getString(R.string.add_edit_record_message_save_success) } returns "儲存完成"
+        coEvery { mockSnackbarController.sendMessage(any()) } just Runs
     }
 
     private fun addModeViewModel() = AddEditRecordViewModel(
         repository = mockRepository,
         saveRecordUseCase = mockSaveRecordUseCase,
         resourceProvider = mockResourceProvider,
+        snackbarController = mockSnackbarController,
         savedStateHandle = SavedStateHandle(mapOf("recordId" to null)),
     )
 
@@ -51,6 +58,7 @@ class AddEditRecordViewModelTest {
         repository = mockRepository,
         saveRecordUseCase = mockSaveRecordUseCase,
         resourceProvider = mockResourceProvider,
+        snackbarController = mockSnackbarController,
         savedStateHandle = SavedStateHandle(mapOf("recordId" to recordId)),
     )
 
@@ -237,6 +245,7 @@ class AddEditRecordViewModelTest {
         }
 
         assertThat(viewModel.uiState.value.isLoading).isFalse()
+        coVerify { mockSnackbarController.sendMessage("儲存完成") }
     }
 
     /** 新增模式儲存失敗時，應顯示錯誤訊息並清除載入狀態。 */
@@ -252,6 +261,7 @@ class AddEditRecordViewModelTest {
 
         assertThat(viewModel.uiState.value.errorMessage).isEqualTo("Network error")
         assertThat(viewModel.uiState.value.isLoading).isFalse()
+        coVerify(exactly = 0) { mockSnackbarController.sendMessage(any()) }
     }
 
     /** UseCase 回傳 Error(null) 時，應顯示 fallback 錯誤訊息。 */
@@ -383,6 +393,7 @@ class AddEditRecordViewModelTest {
 
         assertThat(viewModel.uiState.value.errorMessage).isEqualTo("Update failed")
         assertThat(viewModel.uiState.value.isLoading).isFalse()
+        coVerify(exactly = 0) { mockSnackbarController.sendMessage(any()) }
     }
 
     /** 編輯模式儲存成功後，應發射 savedSuccessfully 事件通知 UI 操作完成。 */
@@ -406,6 +417,8 @@ class AddEditRecordViewModelTest {
             awaitItem()
             cancelAndIgnoreRemainingEvents()
         }
+
+        coVerify { mockSnackbarController.sendMessage("儲存完成") }
     }
 
     // ── resetForm ──
