@@ -1,7 +1,6 @@
 package idv.wennyli.bloodpressurelog.ui.view.record
 
 import app.cash.turbine.test
-import androidx.lifecycle.SavedStateHandle
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
@@ -47,19 +46,19 @@ class AddEditRecordViewModelTest {
     }
 
     private fun addModeViewModel() = AddEditRecordViewModel(
+        recordId = null,
         repository = mockRepository,
         saveRecordUseCase = mockSaveRecordUseCase,
         resourceProvider = mockResourceProvider,
         snackbarController = mockSnackbarController,
-        savedStateHandle = SavedStateHandle(mapOf("recordId" to null)),
     )
 
     private fun editModeViewModel(recordId: String) = AddEditRecordViewModel(
+        recordId = recordId,
         repository = mockRepository,
         saveRecordUseCase = mockSaveRecordUseCase,
         resourceProvider = mockResourceProvider,
         snackbarController = mockSnackbarController,
-        savedStateHandle = SavedStateHandle(mapOf("recordId" to recordId)),
     )
 
     // ── Add mode ──

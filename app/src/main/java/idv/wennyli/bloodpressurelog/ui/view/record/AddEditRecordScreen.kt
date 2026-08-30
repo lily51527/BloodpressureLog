@@ -69,9 +69,12 @@ import java.time.ZoneId
  */
 @Composable
 fun AddEditRecordScreen(
+    recordId: String?,
     onNavigateBack: () -> Unit,
     stayOnScreen: Boolean = false,
-    viewModel: AddEditRecordViewModel = hiltViewModel(),
+    viewModel: AddEditRecordViewModel = hiltViewModel<AddEditRecordViewModel, AddEditRecordViewModel.Factory>(
+        creationCallback = { factory -> factory.create(recordId) },
+    ),
 ) {
     val uiState by viewModel.uiState.collectAsState()
 

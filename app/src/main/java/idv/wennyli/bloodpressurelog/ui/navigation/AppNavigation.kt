@@ -177,6 +177,7 @@ fun AppNavigation(startLoggedIn: Boolean) {
 
             composable(ROUTE_ADD_RECORD) {
                 AddEditRecordScreen(
+                    recordId = null,
                     stayOnScreen = true,
                     onNavigateBack = {},
                 )
@@ -203,8 +204,9 @@ fun AppNavigation(startLoggedIn: Boolean) {
                         defaultValue = null
                     },
                 ),
-            ) {
+            ) { backStackEntry ->
                 AddEditRecordScreen(
+                    recordId = backStackEntry.arguments?.getString(ARG_RECORD_ID),
                     onNavigateBack = { navController.popBackStack() },
                 )
             }

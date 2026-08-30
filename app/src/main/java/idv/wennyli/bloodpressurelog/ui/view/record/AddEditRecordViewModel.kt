@@ -1,8 +1,10 @@
 package idv.wennyli.bloodpressurelog.ui.view.record
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import idv.wennyli.bloodpressurelog.R
 import idv.wennyli.bloodpressurelog.data.repository.BloodPressureRepository
@@ -20,7 +22,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import javax.inject.Inject
 
 data class AddEditRecordUiState(
     val systolic: String = "",
@@ -33,16 +34,20 @@ data class AddEditRecordUiState(
     val isEditMode: Boolean = false,
 )
 
-@HiltViewModel
-class AddEditRecordViewModel @Inject constructor(
+@HiltViewModel(assistedFactory = AddEditRecordViewModel.Factory::class)
+class AddEditRecordViewModel @AssistedInject constructor(
+    @Assisted val recordId: String?,
     private val repository: BloodPressureRepository,
     private val saveRecordUseCase: SaveBloodPressureRecordUseCase,
     private val resourceProvider: ResourceProvider,
     private val snackbarController: SnackbarController,
-    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    val recordId: String? = savedStateHandle["recordId"]
+    /** 由呼叫端（NavGraph 從導航參數取出 recordId 後）建立 ViewModel。 */
+    @AssistedFactory
+    interface Factory {
+        fun create(recordId: String?): AddEditRecordViewModel
+    }
 
     private val _uiState = MutableStateFlow(AddEditRecordUiState(isEditMode = recordId != null))
     val uiState: StateFlow<AddEditRecordUiState> = _uiState.asStateFlow()
