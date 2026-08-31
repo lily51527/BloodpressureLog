@@ -25,25 +25,17 @@ sealed interface Destination {
     @Serializable
     data object EmailVerification : Destination
 
+    /** bottom nav「新增」分頁：連續新增模式。 */
+    @Serializable
+    data object AddRecord : RequiresAuth
+
     @Serializable
     data object RecordList : RequiresAuth
 
     @Serializable
     data object Trends : RequiresAuth
 
-    /**
-     * 血壓紀錄新增／編輯畫面。
-     *
-     * - [recordId] 為 `null`：新增模式（亦作為 bottom nav「新增」top-level 目的地）
-     * - [recordId] 有值：編輯既有紀錄
-     */
+    /** 編輯既有血壓紀錄（由清單進入）。 */
     @Serializable
-    data class AddEditRecord(val recordId: String? = null) : RequiresAuth
+    data class AddEditRecord(val recordId: String) : RequiresAuth
 }
-
-/** bottom navigation 的三個 top-level 目的地，順序即顯示順序。 */
-val TOP_LEVEL_DESTINATIONS: List<Destination> = listOf(
-    Destination.AddEditRecord(),
-    Destination.RecordList,
-    Destination.Trends,
-)

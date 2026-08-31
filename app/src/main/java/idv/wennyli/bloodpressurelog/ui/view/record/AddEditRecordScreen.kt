@@ -61,26 +61,27 @@ import java.time.ZoneId
  * 負責：
  * - 收集 [AddEditRecordViewModel] 的 [AddEditRecordUiState]
  * - 監聽 [AddEditRecordViewModel.savedSuccessfully] 儲存成功事件
- * - 依 [stayOnScreen] 決定儲存後行為：`true` 時重設表單（連續新增模式），`false` 時返回上一頁
+ * - 依 [recordId] 是否為 `null` 決定模式：新增模式（連續輸入，儲存後重設表單、不顯示返回鍵），
+ *   編輯模式（儲存後返回上一頁、顯示返回鍵）
  *
- * @param onNavigateBack 返回上一頁的回呼
- * @param stayOnScreen 儲存成功後是否留在畫面（連續新增模式）；預設 `false`（儲存後離開）
+ * @param recordId 要編輯的紀錄 ID；`null` 表示新增模式
+ * @param onNavigateBack 返回上一頁的回呼（僅編輯模式會觸發）
  * @param viewModel 由 Hilt 提供的 ViewModel 實例
  */
 @Composable
 fun AddEditRecordScreen(
     recordId: String?,
     onNavigateBack: () -> Unit,
-    stayOnScreen: Boolean = false,
     viewModel: AddEditRecordViewModel = hiltViewModel<AddEditRecordViewModel, AddEditRecordViewModel.Factory>(
         creationCallback = { factory -> factory.create(recordId) },
     ),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isAddMode = recordId == null
 
     LaunchedEffect(Unit) {
         viewModel.savedSuccessfully.collect {
-            if (stayOnScreen) {
+            if (isAddMode) {
                 viewModel.resetForm()
             } else {
                 onNavigateBack()
@@ -91,7 +92,7 @@ fun AddEditRecordScreen(
     AddEditRecordContent(
         uiState = uiState,
         onNavigateBack = onNavigateBack,
-        showNavigateBack = !stayOnScreen,
+        showNavigateBack = !isAddMode,
         onSystolicChange = viewModel::onSystolicChange,
         onDiastolicChange = viewModel::onDiastolicChange,
         onPulseChange = viewModel::onPulseChange,
